@@ -497,6 +497,7 @@
                     <button class="btn btn-metric" data-metric="Impressions per Session">Impressions per Session</button>
                     <button class="btn btn-metric" data-metric="OE CPM">OE CPM</button>
                     <button class="btn btn-metric" data-metric="OE RPM">OE RPM</button>
+                    <button class="btn btn-metric" data-metric="Session Duration (seconds)">Session Duration (seconds)</button>
                 </div>
             </div>
             <div class="selector-card">
@@ -4528,15 +4529,17 @@
             "OE Revenue": { symbol: "$", decimals: 2, isRate: false },
             "Impressions per Session": { symbol: "", decimals: 2, isRate: true },
             "OE CPM": { symbol: "$", decimals: 2, isRate: true },
-            "OE RPM": { symbol: "$", decimals: 2, isRate: true }
+            "OE RPM": { symbol: "$", decimals: 2, isRate: true },
+            "Session Duration (seconds)": { symbol: "", decimals: 1, suffix: "s", isRate: true }
         };
 
         function formatValue(value, metric) {
             const conf = metricConfig[metric] || { symbol: "", decimals: 2 };
+            const suffix = conf.suffix || "";
             if (conf.symbol === "$") {
-                return "$" + Number(value).toLocaleString('en-US', { minimumFractionDigits: conf.decimals, maximumFractionDigits: conf.decimals });
+                return "$" + Number(value).toLocaleString('en-US', { minimumFractionDigits: conf.decimals, maximumFractionDigits: conf.decimals }) + suffix;
             } else {
-                return Number(value).toLocaleString('en-US', { minimumFractionDigits: conf.decimals, maximumFractionDigits: conf.decimals });
+                return Number(value).toLocaleString('en-US', { minimumFractionDigits: conf.decimals, maximumFractionDigits: conf.decimals }) + suffix;
             }
         }
 
@@ -4771,6 +4774,10 @@
                             const totalImps = records.reduce((acc, curr) => acc + curr['Total Impressions'], 0);
                             const totalSess = records.reduce((acc, curr) => acc + curr['Sessions'], 0);
                             aggregatedVal = totalSess > 0 ? (totalImps / totalSess) : 0;
+                        } else if (activeMetric === "Session Duration (seconds)") {
+                            const totalDuration = records.reduce((acc, curr) => acc + (curr['Session Duration (seconds)'] * curr['Sessions']), 0);
+                            const totalSess = records.reduce((acc, curr) => acc + curr['Sessions'], 0);
+                            aggregatedVal = totalSess > 0 ? (totalDuration / totalSess) : 0;
                         }
                         
                         filtered.push({
