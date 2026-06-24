@@ -266,14 +266,26 @@
         /* Top Controls: Selector Panels */
         .controls-section {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 1.5rem;
         }
 
-        @media (max-width: 900px) {
-            .controls-section {
-                grid-template-columns: 1fr;
-            }
+        .date-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: white;
+            padding: 0.5rem;
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            width: 100%;
+            transition: all 0.25s;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: var(--accent-indigo);
+            background: rgba(15, 23, 42, 0.9);
         }
 
         .selector-card {
@@ -654,8 +666,8 @@
                     <p>Interactive performance comparison: Before vs. After transition yield analysis</p>
                 </div>
                 <div class="header-meta">
-                    <div class="meta-pill">Before Period: <strong>May 1 – Jun 9, 2026</strong> (40 days)</div>
-                    <div class="meta-pill">After Period: <strong>Jun 10 – Jun 23, 2026</strong> (14 days)</div>
+                    <div class="meta-pill" id="header-before-period">Before Period: <strong>May 1 – Jun 9, 2026</strong> (40 days)</div>
+                    <div class="meta-pill" id="header-after-period">After Period: <strong>Jun 10 – Jun 23, 2026</strong> (14 days)</div>
                 </div>
             </header>
 
@@ -681,6 +693,23 @@
                         <button class="btn btn-domain" data-domain="www.flohockey.tv">FloHockey</button>
                         <button class="btn btn-domain" data-domain="www.floracing.com">FloRacing</button>
                         <button class="btn btn-domain" data-domain="www.flotrack.org">FloTrack</button>
+                    </div>
+                </div>
+                <div class="selector-card">
+                    <div class="card-label">Custom Date Analysis</div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 90px;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">START DATE</span>
+                            <input type="date" id="date-start" class="date-input" value="2026-05-01" min="2026-05-01" max="2026-06-23" onchange="onDateRangeChange()">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 90px;">
+                            <span style="font-size: 0.65rem; color: var(--accent-yellow); font-weight: 700; letter-spacing: 0.05em;">TRANSITION</span>
+                            <input type="date" id="date-transition" class="date-input" value="2026-06-10" min="2026-05-02" max="2026-06-23" onchange="onDateRangeChange()">
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 90px;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">END DATE</span>
+                            <input type="date" id="date-end" class="date-input" value="2026-06-23" min="2026-05-01" max="2026-06-23" onchange="onDateRangeChange()">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -893,6 +922,9 @@
                     dailyData = JSON.parse(dailyDecrypted);
                     writtenInsights = JSON.parse(insightsDecrypted);
                     
+                    // Initialize dynamic stats using default dates
+                    recalculateStats("2026-05-01", "2026-06-10", "2026-06-23");
+                    
                     // Unlock the page visually
                     const overlay = document.getElementById('password-overlay');
                     const wrapper = document.getElementById('dashboard-wrapper');
@@ -919,6 +951,126 @@
                 document.getElementById('password-field').value = "";
                 document.getElementById('password-field').focus();
             }
+        }
+
+        // Recalculate statistics dynamically based on user-selected date ranges
+        function recalculateStats(start, transition, end) {
+            const domains = ["www.flobikes.com", "www.flohockey.tv", "www.floracing.com", "www.flotrack.org"];
+            const stats = {};
+
+            // Helper to aggregate records
+            function aggregate(records) {
+                const days = new Set(records.map(r => r.Date)).size;
+                const sessions = records.reduce((acc, curr) => acc + curr.Sessions, 0);
+                const revenue = records.reduce((acc, curr) => acc + curr.Revenue, 0);
+                const oe_revenue = records.reduce((acc, curr) => acc + curr['OE Revenue'], 0);
+                const opportunities = records.reduce((acc, curr) => acc + curr['Total Opportunities'], 0);
+                const impressions = records.reduce((acc, curr) => acc + curr['Total Impressions'], 0);
+                
+                const totalDuration = records.reduce((acc, curr) => acc + (curr['Session Duration (seconds)'] * curr.Sessions), 0);
+                const avgDuration = sessions > 0 ? (totalDuration / sessions) : 0;
+
+                return {
+                    "Days": days,
+                    "Sessions": sessions,
+                    "Revenue": revenue,
+                    "OE Revenue": oe_revenue,
+                    "Total Opportunities": opportunities,
+                    "Total Impressions": impressions,
+                    "Session Duration (seconds)": avgDuration,
+                    "Programmatic Session RPM": sessions > 0 ? (oe_revenue / sessions * 1000) : 0,
+                    "Session RPM": sessions > 0 ? (revenue / sessions * 1000) : 0,
+                    "OE RPM": opportunities > 0 ? (oe_revenue / opportunities * 1000) : 0,
+                    "OE CPM": impressions > 0 ? (oe_revenue / impressions * 1000) : 0,
+                    "Impressions per Session": sessions > 0 ? (impressions / sessions) : 0
+                };
+            }
+
+            // Calculate for each domain
+            domains.forEach(dom => {
+                const domRecords = dailyData.filter(r => r.Domain === dom && r.Date >= start && r.Date <= end);
+                const beforeRecs = domRecords.filter(r => r.Date < transition);
+                const afterRecs = domRecords.filter(r => r.Date >= transition);
+
+                stats[dom] = {
+                    "Before": aggregate(beforeRecs),
+                    "After": aggregate(afterRecs),
+                    "Variance": {}
+                };
+
+                const metrics = Object.keys(stats[dom]["Before"]);
+                metrics.forEach(m => {
+                    const bVal = stats[dom]["Before"][m];
+                    const aVal = stats[dom]["After"][m];
+                    stats[dom]["Variance"][m] = bVal > 0 ? ((aVal - bVal) / bVal * 100) : 0;
+                });
+            });
+
+            // Calculate for Grand Total
+            const gtRecords = dailyData.filter(r => r.Date >= start && r.Date <= end);
+            const gtBeforeRecs = gtRecords.filter(r => r.Date < transition);
+            const gtAfterRecs = gtRecords.filter(r => r.Date >= transition);
+
+            stats["Grand Total"] = {
+                "Before": aggregate(gtBeforeRecs),
+                "After": aggregate(gtAfterRecs),
+                "Variance": {}
+            };
+
+            const metrics = Object.keys(stats["Grand Total"]["Before"]);
+            metrics.forEach(m => {
+                const bVal = stats["Grand Total"]["Before"][m];
+                const aVal = stats["Grand Total"]["After"][m];
+                stats["Grand Total"]["Variance"][m] = bVal > 0 ? ((aVal - bVal) / bVal * 100) : 0;
+            });
+
+            summaryStats = stats;
+        }
+
+        // Handle date range picker changes and validations
+        function onDateRangeChange() {
+            let start = document.getElementById('date-start').value;
+            let transition = document.getElementById('date-transition').value;
+            let end = document.getElementById('date-end').value;
+
+            if (start >= end) {
+                start = "2026-05-01";
+                document.getElementById('date-start').value = start;
+            }
+            if (transition <= start) {
+                let startDateObj = new Date(start);
+                startDateObj.setDate(startDateObj.getDate() + 1);
+                transition = startDateObj.toISOString().split('T')[0];
+                document.getElementById('date-transition').value = transition;
+            }
+            if (transition > end) {
+                transition = end;
+                document.getElementById('date-transition').value = transition;
+            }
+
+            recalculateStats(start, transition, end);
+            updateHeaderDates(start, transition, end);
+            updateDashboard();
+        }
+
+        function updateHeaderDates(start, transition, end) {
+            const transitionDateObj = new Date(transition);
+            transitionDateObj.setDate(transitionDateObj.getDate() - 1);
+            const beforeEndStr = transitionDateObj.toISOString().split('T')[0];
+
+            function formatDateStr(dateStr) {
+                const parts = dateStr.split('-');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${months[parseInt(parts[1]) - 1]} ${parseInt(parts[2])}`;
+            }
+
+            const bDays = summaryStats[activeDomain]['Before']['Days'];
+            const aDays = summaryStats[activeDomain]['After']['Days'];
+
+            document.getElementById('header-before-period').innerHTML = 
+                `Before Period: <strong>${formatDateStr(start)} – ${formatDateStr(beforeEndStr)}</strong> (${bDays} days)`;
+            document.getElementById('header-after-period').innerHTML = 
+                `After Period: <strong>${formatDateStr(transition)} – ${formatDateStr(end)}</strong> (${aDays} days)`;
         }
 
         function formatValue(value, metric) {
@@ -1133,10 +1285,16 @@
                 // Daily trend chart
                 document.getElementById('chart-display-title').textContent = `${activeDomain} — Daily ${activeMetric} Trend`;
 
-                // Filter daily data for the selected domain
+                // Filter daily data for the selected domain based on dynamic dates
+                const start = document.getElementById('date-start').value;
+                const end = document.getElementById('date-end').value;
+                const transition = document.getElementById('date-transition').value;
+
                 let filtered = [];
                 if (activeDomain === "Grand Total") {
-                    const dates = [...new Set(dailyData.map(d => d.Date))].sort();
+                    const dates = [...new Set(dailyData.map(d => d.Date))]
+                        .filter(d => d >= start && d <= end)
+                        .sort();
                     dates.forEach(date => {
                         const records = dailyData.filter(d => d.Date === date);
                         let aggregatedVal = 0;
@@ -1173,17 +1331,17 @@
                             Date: date,
                             Ts: records[0]['Ts (day)'],
                             Value: aggregatedVal,
-                            Period: records[0].Period
+                            Period: date < transition ? 'Before' : 'After'
                         });
                     });
                 } else {
                     filtered = dailyData
-                        .filter(d => d.Domain === activeDomain)
+                        .filter(d => d.Domain === activeDomain && d.Date >= start && d.Date <= end)
                         .map(d => ({
                             Date: d.Date,
                             Ts: d['Ts (day)'],
                             Value: d[activeMetric],
-                            Period: d.Period
+                            Period: d.Date < transition ? 'Before' : 'After'
                         }))
                         .sort((a, b) => a.Date.localeCompare(b.Date));
                 }
