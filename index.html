@@ -1,0 +1,4899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flo QA — Performance Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151d30;
+            --border-color: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-indigo: #6366f1;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-rose: #f43f5e;
+            --accent-yellow: #eab308;
+            --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            padding: 2rem;
+            line-height: 1.5;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Styling */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1.5rem;
+        }
+
+        .title-area h1 {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, #fff 30%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .title-area h1 span.badge {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 99px;
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            text-transform: uppercase;
+            font-family: var(--font-sans);
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            -webkit-text-fill-color: initial;
+        }
+
+        .title-area p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        .header-meta {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+        }
+
+        .meta-pill {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: var(--text-secondary);
+        }
+
+        .meta-pill strong {
+            color: var(--text-primary);
+        }
+
+        /* Top Controls: Selector Panels */
+        .controls-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .controls-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .selector-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: var(--font-sans);
+        }
+
+        .btn:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: #475569;
+            color: var(--text-primary);
+        }
+
+        .btn.active {
+            background: var(--accent-indigo);
+            border-color: var(--accent-indigo);
+            color: white;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-metric.active {
+            background: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+        }
+
+        /* KPI Grid */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            border-color: #334155;
+        }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .kpi-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .kpi-value-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .kpi-main-val {
+            font-size: 2.2rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            letter-spacing: -0.01em;
+        }
+
+        .kpi-variance {
+            font-size: 0.95rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.15rem;
+        }
+
+        .kpi-variance.positive {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--accent-emerald);
+        }
+
+        .kpi-variance.negative {
+            background: rgba(244, 63, 94, 0.12);
+            color: var(--accent-rose);
+        }
+
+        .kpi-variance.neutral {
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--text-secondary);
+        }
+
+        .kpi-sub-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.75rem;
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .kpi-sub-stats div span {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            margin-top: 0.1rem;
+        }
+
+        /* Main Section: Charts and Analytics */
+        .analytics-section {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .analytics-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+        }
+
+        .chart-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-title {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .chart-toggle-buttons {
+            display: flex;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 0.25rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            font-family: var(--font-sans);
+            transition: all 0.2s;
+        }
+
+        .chart-toggle-btn.active {
+            background: var(--accent-indigo);
+            color: white;
+        }
+
+        .chart-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            height: 380px;
+        }
+
+        /* Insights Card */
+        .insights-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            border-left: 4px solid var(--accent-indigo);
+        }
+
+        .insights-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .insights-body {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .insights-body p {
+            margin-bottom: 0.25rem;
+        }
+
+        .insights-body strong {
+            color: var(--text-primary);
+        }
+
+        .insights-body em {
+            color: #818cf8;
+            font-style: normal;
+            font-weight: 500;
+        }
+
+        /* Table Card */
+        .table-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 0.75rem 1rem;
+            border-bottom: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-weight: 500;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.015);
+        }
+
+        tr.active-row td {
+            background: rgba(99, 102, 241, 0.08);
+            border-bottom-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .table-domain-cell {
+            font-family: var(--font-display);
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .table-domain-cell:hover {
+            color: var(--accent-cyan);
+            text-decoration: underline;
+        }
+
+        .val-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Utility Classes */
+        .color-pos { color: var(--accent-emerald) !important; }
+        .color-neg { color: var(--accent-rose) !important; }
+        .color-neu { color: var(--text-secondary) !important; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Dashboard Header -->
+        <header>
+            <div class="title-area">
+                <h1>Flo QA <span class="badge">Batch 3</span></h1>
+                <p>Interactive performance comparison: Before vs. After transition yield analysis</p>
+            </div>
+            <div class="header-meta">
+                <div class="meta-pill">Before Period: <strong>May 1 – Jun 9, 2026</strong> (40 days)</div>
+                <div class="meta-pill">After Period: <strong>Jun 10 – Jun 23, 2026</strong> (14 days)</div>
+            </div>
+        </header>
+
+        <!-- Top Controls: Domain and Metric Toggles -->
+        <div class="controls-section">
+            <div class="selector-card">
+                <div class="card-label">Select Metric to Analyze</div>
+                <div class="button-group">
+                    <button class="btn btn-metric active" data-metric="Programmatic Session RPM">Programmatic Session RPM</button>
+                    <button class="btn btn-metric" data-metric="Sessions">Sessions</button>
+                    <button class="btn btn-metric" data-metric="OE Revenue">OE Revenue</button>
+                    <button class="btn btn-metric" data-metric="Impressions per Session">Impressions per Session</button>
+                    <button class="btn btn-metric" data-metric="OE CPM">OE CPM</button>
+                    <button class="btn btn-metric" data-metric="OE RPM">OE RPM</button>
+                </div>
+            </div>
+            <div class="selector-card">
+                <div class="card-label">Select Domain</div>
+                <div class="button-group">
+                    <button class="btn btn-domain active" data-domain="Grand Total">Grand Total</button>
+                    <button class="btn btn-domain" data-domain="www.flobikes.com">FloBikes</button>
+                    <button class="btn btn-domain" data-domain="www.flohockey.tv">FloHockey</button>
+                    <button class="btn btn-domain" data-domain="www.floracing.com">FloRacing</button>
+                    <button class="btn btn-domain" data-domain="www.flotrack.org">FloTrack</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="kpi-grid">
+            <!-- Programmatic Session RPM Card -->
+            <div class="kpi-card" id="kpi-main">
+                <div class="kpi-header">
+                    <span class="kpi-title" id="kpi-main-title">Programmatic Session RPM</span>
+                    <span class="kpi-variance positive" id="kpi-main-var">+58.21%</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-main-val" id="kpi-main-val">$10.31</span>
+                </div>
+                <div class="kpi-sub-stats">
+                    <div>Before Avg<span id="kpi-main-before">$6.52</span></div>
+                    <div>After Avg<span id="kpi-main-after">$10.31</span></div>
+                </div>
+            </div>
+
+            <!-- Sessions Card -->
+            <div class="kpi-card" id="kpi-sessions">
+                <div class="kpi-header">
+                    <span class="kpi-title">Sessions (Daily Avg)</span>
+                    <span class="kpi-variance negative" id="kpi-sessions-var">-48.67%</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-main-val" id="kpi-sessions-val">75,438</span>
+                </div>
+                <div class="kpi-sub-stats">
+                    <div>Before Avg<span id="kpi-sessions-before">146,970</span></div>
+                    <div>After Avg<span id="kpi-sessions-after">75,438</span></div>
+                </div>
+            </div>
+
+            <!-- OE Revenue Card -->
+            <div class="kpi-card" id="kpi-revenue">
+                <div class="kpi-header">
+                    <span class="kpi-title">OE Revenue (Daily Avg)</span>
+                    <span class="kpi-variance negative" id="kpi-revenue-var">-18.82%</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-main-val" id="kpi-revenue-val">$777.72</span>
+                </div>
+                <div class="kpi-sub-stats">
+                    <div>Before Avg<span id="kpi-revenue-before">$957.68</span></div>
+                    <div>After Avg<span id="kpi-revenue-after">$777.72</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Visual Analytics: Charts and Insights -->
+        <div class="analytics-section">
+            <div class="chart-container-card">
+                <div class="chart-header-row">
+                    <div class="chart-title" id="chart-display-title">Programmatic Session RPM Trend</div>
+                    <div class="chart-toggle-buttons">
+                        <button class="chart-toggle-btn active" data-chart-type="trend">Daily Trend</button>
+                        <button class="chart-toggle-btn" data-chart-type="bar">Before vs After Comparison</button>
+                    </div>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="analyticsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="insights-card">
+                <div class="insights-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-indigo)"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                    Performance Insights
+                </div>
+                <div class="insights-body" id="insights-content">
+                    <!-- Loaded dynamically via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Domain Breakdown Table -->
+        <div class="table-section">
+            <div class="chart-title">Domain Comparison Matrix</div>
+            <div class="table-wrapper">
+                <table id="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Days (B / A)</th>
+                            <th>Before Avg</th>
+                            <th>After Avg</th>
+                            <th>Absolute Diff</th>
+                            <th>Variance (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- Loaded dynamically via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data and App Logic -->
+    <script>
+        // Embed compiled data structure
+        const summaryStats = {
+  "www.flobikes.com": {
+    "Before": {
+      "Days": 40.0,
+      "Sessions": 300834.0,
+      "Revenue": 19661.91,
+      "OE Revenue": 5814.389999999999,
+      "Total Opportunities": 18433692.0,
+      "Total Impressions": 14956646.0,
+      "Session Duration (seconds)": 614.0430303694619,
+      "Programmatic Session RPM": 19.32756935718702,
+      "Session RPM": 65.35800474680389,
+      "OE RPM": 0.3154218916102102,
+      "OE CPM": 0.38874958998160414,
+      "Impressions per Session": 49.71727264870327
+    },
+    "After": {
+      "Days": 14.0,
+      "Sessions": 131153.0,
+      "Revenue": 3652.78,
+      "OE Revenue": 2479.4,
+      "Total Opportunities": 3407898.0,
+      "Total Impressions": 3180624.0,
+      "Session Duration (seconds)": 412.8130503807516,
+      "Programmatic Session RPM": 18.90463809443932,
+      "Session RPM": 27.85128819012909,
+      "OE RPM": 0.7275452493003018,
+      "OE CPM": 0.7795325697095915,
+      "Impressions per Session": 24.25124854177945
+    },
+    "Variance": {
+      "Days": -65.0,
+      "Sessions": -56.40353151571963,
+      "Revenue": -81.42204902779028,
+      "OE Revenue": -57.35752159727847,
+      "Total Opportunities": -81.51266713146775,
+      "Total Impressions": -78.73437667776587,
+      "Session Duration (seconds)": -32.77131569551939,
+      "Programmatic Session RPM": -2.18822788800616,
+      "Session RPM": -57.386569100411435,
+      "OE RPM": 130.65781692774274,
+      "OE CPM": 100.52305900733668,
+      "Impressions per Session": -51.22168363269627
+    }
+  },
+  "www.flohockey.tv": {
+    "Before": {
+      "Days": 40.0,
+      "Sessions": 3938997.0,
+      "Revenue": 9450.029999999999,
+      "OE Revenue": 4656.53,
+      "Total Opportunities": 10359810.0,
+      "Total Impressions": 8964000.0,
+      "Session Duration (seconds)": 57.34721986296661,
+      "Programmatic Session RPM": 1.1821613471652808,
+      "Session RPM": 2.399095505784848,
+      "OE RPM": 0.4494802510856859,
+      "OE CPM": 0.5194701026327532,
+      "Impressions per Session": 2.2757062267374155
+    },
+    "After": {
+      "Days": 14.0,
+      "Sessions": 365936.0,
+      "Revenue": 2096.21,
+      "OE Revenue": 807.05,
+      "Total Opportunities": 1618670.0,
+      "Total Impressions": 1538735.0,
+      "Session Duration (seconds)": 129.549290045653,
+      "Programmatic Session RPM": 2.20544029557081,
+      "Session RPM": 5.728351405710288,
+      "OE RPM": 0.49858834722333767,
+      "OE CPM": 0.5244892720318963,
+      "Impressions per Session": 4.204929277250667
+    },
+    "Variance": {
+      "Days": -65.0,
+      "Sessions": -90.7099193017918,
+      "Revenue": -77.8179540170772,
+      "OE Revenue": -82.66842477123522,
+      "Total Opportunities": -84.37548565079861,
+      "Total Impressions": -82.83428157072736,
+      "Session Duration (seconds)": 125.90334868057427,
+      "Programmatic Session RPM": 86.5600073001255,
+      "Session RPM": 138.7712949275146,
+      "OE RPM": 10.925529212692847,
+      "OE CPM": 0.9662094841849881,
+      "Impressions per Session": 84.7746966566549
+    }
+  },
+  "www.floracing.com": {
+    "Before": {
+      "Days": 40.0,
+      "Sessions": 1253948.0,
+      "Revenue": 28465.43,
+      "OE Revenue": 27171.86,
+      "Total Opportunities": 29058023.0,
+      "Total Impressions": 25792099.0,
+      "Session Duration (seconds)": 376.1994915265963,
+      "Programmatic Session RPM": 21.66904847728933,
+      "Session RPM": 22.70064627879306,
+      "OE RPM": 0.935089768495262,
+      "OE CPM": 1.0534954910028842,
+      "Impressions per Session": 20.56871497063674
+    },
+    "After": {
+      "Days": 14.0,
+      "Sessions": 426422.0,
+      "Revenue": 8374.310000000001,
+      "OE Revenue": 7471.25,
+      "Total Opportunities": 7968170.0,
+      "Total Impressions": 7624987.0,
+      "Session Duration (seconds)": 330.6127005760135,
+      "Programmatic Session RPM": 17.5207892650942,
+      "Session RPM": 19.63855054382748,
+      "OE RPM": 0.9376368727072841,
+      "OE CPM": 0.9798377361167961,
+      "Impressions per Session": 17.88131709902397
+    },
+    "Variance": {
+      "Days": -65.0,
+      "Sessions": -65.99364566951739,
+      "Revenue": -70.58077113186064,
+      "OE Revenue": -72.50372260124996,
+      "Total Opportunities": -72.57841663901222,
+      "Total Impressions": -70.43673335776201,
+      "Session Duration (seconds)": -12.117717322156448,
+      "Programmatic Session RPM": -19.143707286191145,
+      "Session RPM": -13.489024485730994,
+      "OE RPM": 0.2723914107327755,
+      "OE CPM": -6.9917484711746525,
+      "Impressions per Session": -13.065463133935278
+    }
+  },
+  "www.flotrack.org": {
+    "Before": {
+      "Days": 40.0,
+      "Sessions": 385025.0,
+      "Revenue": 3475.57,
+      "OE Revenue": 664.6,
+      "Total Opportunities": 2763527.0,
+      "Total Impressions": 2565875.0,
+      "Session Duration (seconds)": 132.03386793629534,
+      "Programmatic Session RPM": 1.726121680410363,
+      "Session RPM": 9.026868385169793,
+      "OE RPM": 0.24048977990806678,
+      "OE CPM": 0.259014955911726,
+      "Impressions per Session": 6.664177650801896
+    },
+    "After": {
+      "Days": 14.0,
+      "Sessions": 132625.0,
+      "Revenue": 964.3,
+      "OE Revenue": 130.4,
+      "Total Opportunities": 548275.0,
+      "Total Impressions": 532592.0,
+      "Session Duration (seconds)": 107.5253082006943,
+      "Programmatic Session RPM": 0.9832233741753063,
+      "Session RPM": 7.270876531573986,
+      "OE RPM": 0.23783685194473578,
+      "OE CPM": 0.24484032805599787,
+      "Impressions per Session": 4.015773798303488
+    },
+    "Variance": {
+      "Days": -65.0,
+      "Sessions": -65.55418479319525,
+      "Revenue": -72.25491070529439,
+      "OE Revenue": -80.37917544387602,
+      "Total Opportunities": -80.16031687043404,
+      "Total Impressions": -79.24326009645833,
+      "Session Duration (seconds)": -18.562328074359,
+      "Programmatic Session RPM": -43.03858265996881,
+      "Session RPM": -19.452946234163772,
+      "OE RPM": -1.103135428185408,
+      "OE CPM": -5.472513278561009,
+      "Impressions per Session": -39.74089514525064
+    }
+  },
+  "Grand Total": {
+    "Before": {
+      "Days": 40.0,
+      "Sessions": 5878804.0,
+      "Revenue": 61052.94,
+      "OE Revenue": 38307.380000000005,
+      "Total Opportunities": 60615052.0,
+      "Total Impressions": 52278620.0,
+      "Session Duration (seconds)": 158.73747245182815,
+      "Programmatic Session RPM": 6.516185945304522,
+      "Session RPM": 10.385265438344263,
+      "OE RPM": 0.6319780110062432,
+      "OE CPM": 0.7327542310795504,
+      "Impressions per Session": 8.892730562202788
+    },
+    "After": {
+      "Days": 14.0,
+      "Sessions": 1056136.0,
+      "Revenue": 15087.6,
+      "OE Revenue": 10888.1,
+      "Total Opportunities": 13543013.0,
+      "Total Impressions": 12876938.0,
+      "Session Duration (seconds)": 243.14055387173116,
+      "Programmatic Session RPM": 10.309373035290909,
+      "Session RPM": 14.285660180128318,
+      "OE RPM": 0.803964376317146,
+      "OE CPM": 0.845550394045541,
+      "Impressions per Session": 12.192499829567405
+    },
+    "Variance": {
+      "Days": -65.0,
+      "Sessions": -82.03484926525871,
+      "Revenue": -75.28767656397875,
+      "OE Revenue": -71.5770172744782,
+      "Total Opportunities": -77.65734326186836,
+      "Total Impressions": -75.36863444367889,
+      "Session Duration (seconds)": 53.17149134116186,
+      "Programmatic Session RPM": 58.211768691464485,
+      "Session RPM": 37.55700578805716,
+      "OE RPM": 27.21397933403791,
+      "OE CPM": 15.39345092553209,
+      "Impressions per Session": 37.10636732197633
+    }
+  }
+};
+        const dailyData = [
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-01",
+    "Ts (day)": "5/1/2026",
+    "Sessions": 11245.0,
+    "Session Duration (seconds)": 492.6112939,
+    "Total Opportunities": 290117.0,
+    "Total Impressions": 198438.0,
+    "Revenue": 194.93,
+    "OE Revenue": 178.3,
+    "OE RPM": 0.61,
+    "OE CPM": 0.94,
+    "Impressions per Session": 17.65,
+    "Session RPM": 17.34,
+    "Programmatic Session RPM": 15.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-02",
+    "Ts (day)": "5/2/2026",
+    "Sessions": 13501.0,
+    "Session Duration (seconds)": 440.8589734,
+    "Total Opportunities": 356691.0,
+    "Total Impressions": 244686.0,
+    "Revenue": 297.94,
+    "OE Revenue": 235.73,
+    "OE RPM": 0.66,
+    "OE CPM": 1.04,
+    "Impressions per Session": 18.12,
+    "Session RPM": 22.07,
+    "Programmatic Session RPM": 17.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-03",
+    "Ts (day)": "5/3/2026",
+    "Sessions": 12337.0,
+    "Session Duration (seconds)": 462.6551836,
+    "Total Opportunities": 366318.0,
+    "Total Impressions": 254187.0,
+    "Revenue": 272.04,
+    "OE Revenue": 219.99,
+    "OE RPM": 0.6,
+    "OE CPM": 0.93,
+    "Impressions per Session": 20.6,
+    "Session RPM": 22.05,
+    "Programmatic Session RPM": 17.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-04",
+    "Ts (day)": "5/4/2026",
+    "Sessions": 6382.0,
+    "Session Duration (seconds)": 369.0827327,
+    "Total Opportunities": 213047.0,
+    "Total Impressions": 139581.0,
+    "Revenue": 127.24,
+    "OE Revenue": 85.19,
+    "OE RPM": 0.4,
+    "OE CPM": 0.68,
+    "Impressions per Session": 21.87,
+    "Session RPM": 19.94,
+    "Programmatic Session RPM": 13.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-05",
+    "Ts (day)": "5/5/2026",
+    "Sessions": 4578.0,
+    "Session Duration (seconds)": 415.3219747,
+    "Total Opportunities": 143553.0,
+    "Total Impressions": 95464.0,
+    "Revenue": 96.08,
+    "OE Revenue": 64.59,
+    "OE RPM": 0.45,
+    "OE CPM": 0.79,
+    "Impressions per Session": 20.85,
+    "Session RPM": 20.99,
+    "Programmatic Session RPM": 14.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-06",
+    "Ts (day)": "5/6/2026",
+    "Sessions": 4416.0,
+    "Session Duration (seconds)": 448.9689764,
+    "Total Opportunities": 123258.0,
+    "Total Impressions": 83097.0,
+    "Revenue": 87.66,
+    "OE Revenue": 57.39,
+    "OE RPM": 0.47,
+    "OE CPM": 0.8,
+    "Impressions per Session": 18.82,
+    "Session RPM": 19.85,
+    "Programmatic Session RPM": 13.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-07",
+    "Ts (day)": "5/7/2026",
+    "Sessions": 5232.0,
+    "Session Duration (seconds)": 387.6209862,
+    "Total Opportunities": 121943.0,
+    "Total Impressions": 83124.0,
+    "Revenue": 82.63,
+    "OE Revenue": 58.26,
+    "OE RPM": 0.48,
+    "OE CPM": 0.81,
+    "Impressions per Session": 15.89,
+    "Session RPM": 15.79,
+    "Programmatic Session RPM": 11.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-08",
+    "Ts (day)": "5/8/2026",
+    "Sessions": 10628.0,
+    "Session Duration (seconds)": 411.2960105,
+    "Total Opportunities": 248638.0,
+    "Total Impressions": 194255.0,
+    "Revenue": 209.13,
+    "OE Revenue": 114.36,
+    "OE RPM": 0.46,
+    "OE CPM": 0.76,
+    "Impressions per Session": 18.28,
+    "Session RPM": 19.68,
+    "Programmatic Session RPM": 10.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-09",
+    "Ts (day)": "5/9/2026",
+    "Sessions": 11145.0,
+    "Session Duration (seconds)": 449.8173172,
+    "Total Opportunities": 319788.0,
+    "Total Impressions": 265331.0,
+    "Revenue": 345.46,
+    "OE Revenue": 160.22,
+    "OE RPM": 0.5,
+    "OE CPM": 0.92,
+    "Impressions per Session": 23.81,
+    "Session RPM": 31.0,
+    "Programmatic Session RPM": 14.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-10",
+    "Ts (day)": "5/10/2026",
+    "Sessions": 9982.0,
+    "Session Duration (seconds)": 489.2906231,
+    "Total Opportunities": 334438.0,
+    "Total Impressions": 273023.0,
+    "Revenue": 352.0,
+    "OE Revenue": 142.09,
+    "OE RPM": 0.42,
+    "OE CPM": 0.83,
+    "Impressions per Session": 27.35,
+    "Session RPM": 35.26,
+    "Programmatic Session RPM": 14.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-11",
+    "Ts (day)": "5/11/2026",
+    "Sessions": 6461.0,
+    "Session Duration (seconds)": 315.7599443,
+    "Total Opportunities": 177345.0,
+    "Total Impressions": 134402.0,
+    "Revenue": 180.23,
+    "OE Revenue": 60.47,
+    "OE RPM": 0.34,
+    "OE CPM": 0.77,
+    "Impressions per Session": 20.8,
+    "Session RPM": 27.9,
+    "Programmatic Session RPM": 9.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-12",
+    "Ts (day)": "5/12/2026",
+    "Sessions": 8771.0,
+    "Session Duration (seconds)": 800.0613385,
+    "Total Opportunities": 245102.0,
+    "Total Impressions": 210693.0,
+    "Revenue": 287.17,
+    "OE Revenue": 120.27,
+    "OE RPM": 0.49,
+    "OE CPM": 0.91,
+    "Impressions per Session": 24.02,
+    "Session RPM": 32.74,
+    "Programmatic Session RPM": 13.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-13",
+    "Ts (day)": "5/13/2026",
+    "Sessions": 9982.0,
+    "Session Duration (seconds)": 530.2129834,
+    "Total Opportunities": 315904.0,
+    "Total Impressions": 277388.0,
+    "Revenue": 396.45,
+    "OE Revenue": 132.32,
+    "OE RPM": 0.42,
+    "OE CPM": 0.9,
+    "Impressions per Session": 27.79,
+    "Session RPM": 39.72,
+    "Programmatic Session RPM": 13.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-14",
+    "Ts (day)": "5/14/2026",
+    "Sessions": 9302.0,
+    "Session Duration (seconds)": 569.8870135,
+    "Total Opportunities": 441069.0,
+    "Total Impressions": 382407.0,
+    "Revenue": 568.0,
+    "OE Revenue": 167.98,
+    "OE RPM": 0.38,
+    "OE CPM": 0.91,
+    "Impressions per Session": 41.11,
+    "Session RPM": 61.06,
+    "Programmatic Session RPM": 18.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-15",
+    "Ts (day)": "5/15/2026",
+    "Sessions": 15692.0,
+    "Session Duration (seconds)": 449.7936528,
+    "Total Opportunities": 697500.0,
+    "Total Impressions": 612658.0,
+    "Revenue": 908.2,
+    "OE Revenue": 249.34,
+    "OE RPM": 0.36,
+    "OE CPM": 0.86,
+    "Impressions per Session": 39.04,
+    "Session RPM": 57.88,
+    "Programmatic Session RPM": 15.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-16",
+    "Ts (day)": "5/16/2026",
+    "Sessions": 9818.0,
+    "Session Duration (seconds)": 656.2657364,
+    "Total Opportunities": 734090.0,
+    "Total Impressions": 611125.0,
+    "Revenue": 915.64,
+    "OE Revenue": 223.84,
+    "OE RPM": 0.3,
+    "OE CPM": 0.83,
+    "Impressions per Session": 62.25,
+    "Session RPM": 93.26,
+    "Programmatic Session RPM": 22.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-17",
+    "Ts (day)": "5/17/2026",
+    "Sessions": 7972.0,
+    "Session Duration (seconds)": 755.3236327,
+    "Total Opportunities": 700211.0,
+    "Total Impressions": 588058.0,
+    "Revenue": 894.3,
+    "OE Revenue": 232.64,
+    "OE RPM": 0.33,
+    "OE CPM": 0.89,
+    "Impressions per Session": 73.77,
+    "Session RPM": 112.18,
+    "Programmatic Session RPM": 29.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-18",
+    "Ts (day)": "5/18/2026",
+    "Sessions": 4389.0,
+    "Session Duration (seconds)": 540.0066074,
+    "Total Opportunities": 359909.0,
+    "Total Impressions": 286191.0,
+    "Revenue": 509.84,
+    "OE Revenue": 74.4,
+    "OE RPM": 0.21,
+    "OE CPM": 0.8,
+    "Impressions per Session": 65.21,
+    "Session RPM": 116.16,
+    "Programmatic Session RPM": 17.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-19",
+    "Ts (day)": "5/19/2026",
+    "Sessions": 5987.0,
+    "Session Duration (seconds)": 825.3400702,
+    "Total Opportunities": 548051.0,
+    "Total Impressions": 476647.0,
+    "Revenue": 650.79,
+    "OE Revenue": 137.14,
+    "OE RPM": 0.25,
+    "OE CPM": 0.6,
+    "Impressions per Session": 79.61,
+    "Session RPM": 108.7,
+    "Programmatic Session RPM": 22.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-20",
+    "Ts (day)": "5/20/2026",
+    "Sessions": 9886.0,
+    "Session Duration (seconds)": 581.1857172,
+    "Total Opportunities": 653505.0,
+    "Total Impressions": 559609.0,
+    "Revenue": 793.31,
+    "OE Revenue": 165.33,
+    "OE RPM": 0.25,
+    "OE CPM": 0.66,
+    "Impressions per Session": 56.61,
+    "Session RPM": 80.25,
+    "Programmatic Session RPM": 16.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-21",
+    "Ts (day)": "5/21/2026",
+    "Sessions": 8687.0,
+    "Session Duration (seconds)": 660.9480833,
+    "Total Opportunities": 694683.0,
+    "Total Impressions": 603565.0,
+    "Revenue": 869.42,
+    "OE Revenue": 179.55,
+    "OE RPM": 0.26,
+    "OE CPM": 0.68,
+    "Impressions per Session": 69.48,
+    "Session RPM": 100.08,
+    "Programmatic Session RPM": 20.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-22",
+    "Ts (day)": "5/22/2026",
+    "Sessions": 8161.0,
+    "Session Duration (seconds)": 664.2203161,
+    "Total Opportunities": 636804.0,
+    "Total Impressions": 541974.0,
+    "Revenue": 707.0,
+    "OE Revenue": 171.99,
+    "OE RPM": 0.27,
+    "OE CPM": 0.62,
+    "Impressions per Session": 66.41,
+    "Session RPM": 86.63,
+    "Programmatic Session RPM": 21.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-23",
+    "Ts (day)": "5/23/2026",
+    "Sessions": 10659.0,
+    "Session Duration (seconds)": 691.1422272,
+    "Total Opportunities": 902192.0,
+    "Total Impressions": 757991.0,
+    "Revenue": 1012.71,
+    "OE Revenue": 284.23,
+    "OE RPM": 0.32,
+    "OE CPM": 0.71,
+    "Impressions per Session": 71.11,
+    "Session RPM": 95.01,
+    "Programmatic Session RPM": 26.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-24",
+    "Ts (day)": "5/24/2026",
+    "Sessions": 8114.0,
+    "Session Duration (seconds)": 853.2870348,
+    "Total Opportunities": 843345.0,
+    "Total Impressions": 695930.0,
+    "Revenue": 899.19,
+    "OE Revenue": 244.83,
+    "OE RPM": 0.29,
+    "OE CPM": 0.66,
+    "Impressions per Session": 85.77,
+    "Session RPM": 110.82,
+    "Programmatic Session RPM": 30.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-25",
+    "Ts (day)": "5/25/2026",
+    "Sessions": 4228.0,
+    "Session Duration (seconds)": 562.4529328,
+    "Total Opportunities": 383801.0,
+    "Total Impressions": 279763.0,
+    "Revenue": 424.98,
+    "OE Revenue": 73.02,
+    "OE RPM": 0.19,
+    "OE CPM": 0.69,
+    "Impressions per Session": 66.17,
+    "Session RPM": 100.51,
+    "Programmatic Session RPM": 17.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-26",
+    "Ts (day)": "5/26/2026",
+    "Sessions": 6277.0,
+    "Session Duration (seconds)": 966.9351601,
+    "Total Opportunities": 599280.0,
+    "Total Impressions": 516699.0,
+    "Revenue": 667.2,
+    "OE Revenue": 157.35,
+    "OE RPM": 0.26,
+    "OE CPM": 0.6,
+    "Impressions per Session": 82.32,
+    "Session RPM": 106.29,
+    "Programmatic Session RPM": 25.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-27",
+    "Ts (day)": "5/27/2026",
+    "Sessions": 6154.0,
+    "Session Duration (seconds)": 927.4106272,
+    "Total Opportunities": 671971.0,
+    "Total Impressions": 569377.0,
+    "Revenue": 789.34,
+    "OE Revenue": 151.37,
+    "OE RPM": 0.23,
+    "OE CPM": 0.6,
+    "Impressions per Session": 92.52,
+    "Session RPM": 128.26,
+    "Programmatic Session RPM": 24.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-28",
+    "Ts (day)": "5/28/2026",
+    "Sessions": 6066.0,
+    "Session Duration (seconds)": 871.767392,
+    "Total Opportunities": 668448.0,
+    "Total Impressions": 582760.0,
+    "Revenue": 799.71,
+    "OE Revenue": 151.63,
+    "OE RPM": 0.23,
+    "OE CPM": 0.58,
+    "Impressions per Session": 96.07,
+    "Session RPM": 131.84,
+    "Programmatic Session RPM": 25.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-29",
+    "Ts (day)": "5/29/2026",
+    "Sessions": 7884.0,
+    "Session Duration (seconds)": 782.8209031,
+    "Total Opportunities": 774131.0,
+    "Total Impressions": 690318.0,
+    "Revenue": 919.76,
+    "OE Revenue": 195.1,
+    "OE RPM": 0.25,
+    "OE CPM": 0.59,
+    "Impressions per Session": 87.56,
+    "Session RPM": 116.66,
+    "Programmatic Session RPM": 24.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-30",
+    "Ts (day)": "5/30/2026",
+    "Sessions": 8209.0,
+    "Session Duration (seconds)": 729.1438665,
+    "Total Opportunities": 753003.0,
+    "Total Impressions": 661484.0,
+    "Revenue": 930.46,
+    "OE Revenue": 181.44,
+    "OE RPM": 0.24,
+    "OE CPM": 0.63,
+    "Impressions per Session": 80.58,
+    "Session RPM": 113.35,
+    "Programmatic Session RPM": 22.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-05-31",
+    "Ts (day)": "5/31/2026",
+    "Sessions": 8434.0,
+    "Session Duration (seconds)": 721.9320607,
+    "Total Opportunities": 834176.0,
+    "Total Impressions": 681826.0,
+    "Revenue": 829.91,
+    "OE Revenue": 208.86,
+    "OE RPM": 0.25,
+    "OE CPM": 0.56,
+    "Impressions per Session": 80.84,
+    "Session RPM": 98.4,
+    "Programmatic Session RPM": 24.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-01",
+    "Ts (day)": "6/1/2026",
+    "Sessions": 4701.0,
+    "Session Duration (seconds)": 725.047224,
+    "Total Opportunities": 469650.0,
+    "Total Impressions": 343614.0,
+    "Revenue": 435.05,
+    "OE Revenue": 89.51,
+    "OE RPM": 0.19,
+    "OE CPM": 0.53,
+    "Impressions per Session": 73.09,
+    "Session RPM": 92.54,
+    "Programmatic Session RPM": 19.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-02",
+    "Ts (day)": "6/2/2026",
+    "Sessions": 3454.0,
+    "Session Duration (seconds)": 704.6496815,
+    "Total Opportunities": 319634.0,
+    "Total Impressions": 229207.0,
+    "Revenue": 259.65,
+    "OE Revenue": 75.66,
+    "OE RPM": 0.24,
+    "OE CPM": 0.54,
+    "Impressions per Session": 66.36,
+    "Session RPM": 75.18,
+    "Programmatic Session RPM": 21.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-03",
+    "Ts (day)": "6/3/2026",
+    "Sessions": 3468.0,
+    "Session Duration (seconds)": 761.3904268,
+    "Total Opportunities": 310026.0,
+    "Total Impressions": 217772.0,
+    "Revenue": 194.91,
+    "OE Revenue": 77.73,
+    "OE RPM": 0.25,
+    "OE CPM": 0.48,
+    "Impressions per Session": 62.79,
+    "Session RPM": 56.2,
+    "Programmatic Session RPM": 22.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-04",
+    "Ts (day)": "6/4/2026",
+    "Sessions": 3381.0,
+    "Session Duration (seconds)": 742.4708666,
+    "Total Opportunities": 318021.0,
+    "Total Impressions": 214373.0,
+    "Revenue": 187.3,
+    "OE Revenue": 94.29,
+    "OE RPM": 0.3,
+    "OE CPM": 0.56,
+    "Impressions per Session": 63.41,
+    "Session RPM": 55.4,
+    "Programmatic Session RPM": 27.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-05",
+    "Ts (day)": "6/5/2026",
+    "Sessions": 3779.0,
+    "Session Duration (seconds)": 740.7782482,
+    "Total Opportunities": 299006.0,
+    "Total Impressions": 217715.0,
+    "Revenue": 202.8,
+    "OE Revenue": 86.67,
+    "OE RPM": 0.29,
+    "OE CPM": 0.54,
+    "Impressions per Session": 57.61,
+    "Session RPM": 53.66,
+    "Programmatic Session RPM": 22.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-06",
+    "Ts (day)": "6/6/2026",
+    "Sessions": 4938.0,
+    "Session Duration (seconds)": 666.2298501,
+    "Total Opportunities": 343395.0,
+    "Total Impressions": 243303.0,
+    "Revenue": 216.1,
+    "OE Revenue": 125.5,
+    "OE RPM": 0.37,
+    "OE CPM": 0.64,
+    "Impressions per Session": 49.27,
+    "Session RPM": 43.76,
+    "Programmatic Session RPM": 25.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-07",
+    "Ts (day)": "6/7/2026",
+    "Sessions": 6450.0,
+    "Session Duration (seconds)": 729.087907,
+    "Total Opportunities": 448527.0,
+    "Total Impressions": 340077.0,
+    "Revenue": 384.58,
+    "OE Revenue": 172.89,
+    "OE RPM": 0.39,
+    "OE CPM": 0.76,
+    "Impressions per Session": 52.73,
+    "Session RPM": 59.62,
+    "Programmatic Session RPM": 26.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-08",
+    "Ts (day)": "6/8/2026",
+    "Sessions": 5246.0,
+    "Session Duration (seconds)": 766.9927564,
+    "Total Opportunities": 404745.0,
+    "Total Impressions": 301084.0,
+    "Revenue": 372.25,
+    "OE Revenue": 118.76,
+    "OE RPM": 0.29,
+    "OE CPM": 0.72,
+    "Impressions per Session": 57.39,
+    "Session RPM": 70.96,
+    "Programmatic Session RPM": 22.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-09",
+    "Ts (day)": "6/9/2026",
+    "Sessions": 4838.0,
+    "Session Duration (seconds)": 787.1701116,
+    "Total Opportunities": 368377.0,
+    "Total Impressions": 297450.0,
+    "Revenue": 390.55,
+    "OE Revenue": 94.16,
+    "OE RPM": 0.26,
+    "OE CPM": 0.65,
+    "Impressions per Session": 61.48,
+    "Session RPM": 80.73,
+    "Programmatic Session RPM": 19.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-10",
+    "Ts (day)": "6/10/2026",
+    "Sessions": 6550.0,
+    "Session Duration (seconds)": 484.5722137,
+    "Total Opportunities": 229104.0,
+    "Total Impressions": 190835.0,
+    "Revenue": 254.07,
+    "OE Revenue": 56.72,
+    "OE RPM": 0.25,
+    "OE CPM": 0.64,
+    "Impressions per Session": 29.14,
+    "Session RPM": 38.79,
+    "Programmatic Session RPM": 8.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-11",
+    "Ts (day)": "6/11/2026",
+    "Sessions": 5417.0,
+    "Session Duration (seconds)": 509.1676205,
+    "Total Opportunities": 153628.0,
+    "Total Impressions": 142233.0,
+    "Revenue": 187.91,
+    "OE Revenue": 74.61,
+    "OE RPM": 0.49,
+    "OE CPM": 0.94,
+    "Impressions per Session": 26.26,
+    "Session RPM": 34.69,
+    "Programmatic Session RPM": 13.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-12",
+    "Ts (day)": "6/12/2026",
+    "Sessions": 6584.0,
+    "Session Duration (seconds)": 548.1568955,
+    "Total Opportunities": 199611.0,
+    "Total Impressions": 192128.0,
+    "Revenue": 277.36,
+    "OE Revenue": 94.26,
+    "OE RPM": 0.47,
+    "OE CPM": 1.0,
+    "Impressions per Session": 29.18,
+    "Session RPM": 42.13,
+    "Programmatic Session RPM": 14.3,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-13",
+    "Ts (day)": "6/13/2026",
+    "Sessions": 9219.0,
+    "Session Duration (seconds)": 500.8575767,
+    "Total Opportunities": 194193.0,
+    "Total Impressions": 184799.0,
+    "Revenue": 239.75,
+    "OE Revenue": 112.14,
+    "OE RPM": 0.58,
+    "OE CPM": 0.99,
+    "Impressions per Session": 20.05,
+    "Session RPM": 26.01,
+    "Programmatic Session RPM": 12.2,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-14",
+    "Ts (day)": "6/14/2026",
+    "Sessions": 8273.0,
+    "Session Duration (seconds)": 575.1261936,
+    "Total Opportunities": 302950.0,
+    "Total Impressions": 284870.0,
+    "Revenue": 335.68,
+    "OE Revenue": 139.17,
+    "OE RPM": 0.46,
+    "OE CPM": 0.82,
+    "Impressions per Session": 34.43,
+    "Session RPM": 40.57,
+    "Programmatic Session RPM": 16.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-15",
+    "Ts (day)": "6/15/2026",
+    "Sessions": 4668.0,
+    "Session Duration (seconds)": 300.9843616,
+    "Total Opportunities": 129294.0,
+    "Total Impressions": 118404.0,
+    "Revenue": 129.05,
+    "OE Revenue": 49.02,
+    "OE RPM": 0.38,
+    "OE CPM": 0.79,
+    "Impressions per Session": 25.37,
+    "Session RPM": 27.65,
+    "Programmatic Session RPM": 10.5,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-16",
+    "Ts (day)": "6/16/2026",
+    "Sessions": 4562.0,
+    "Session Duration (seconds)": 225.1402893,
+    "Total Opportunities": 73965.0,
+    "Total Impressions": 69014.0,
+    "Revenue": 84.83,
+    "OE Revenue": 35.46,
+    "OE RPM": 0.48,
+    "OE CPM": 0.9,
+    "Impressions per Session": 15.13,
+    "Session RPM": 18.6,
+    "Programmatic Session RPM": 7.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-17",
+    "Ts (day)": "6/17/2026",
+    "Sessions": 14691.0,
+    "Session Duration (seconds)": 333.6184058,
+    "Total Opportunities": 278261.0,
+    "Total Impressions": 264155.0,
+    "Revenue": 295.88,
+    "OE Revenue": 258.24,
+    "OE RPM": 0.93,
+    "OE CPM": 1.15,
+    "Impressions per Session": 17.98,
+    "Session RPM": 20.14,
+    "Programmatic Session RPM": 17.6,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-18",
+    "Ts (day)": "6/18/2026",
+    "Sessions": 13891.0,
+    "Session Duration (seconds)": 432.2320207,
+    "Total Opportunities": 379747.0,
+    "Total Impressions": 358326.0,
+    "Revenue": 377.5,
+    "OE Revenue": 344.8,
+    "OE RPM": 0.91,
+    "OE CPM": 1.11,
+    "Impressions per Session": 25.8,
+    "Session RPM": 27.18,
+    "Programmatic Session RPM": 24.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-19",
+    "Ts (day)": "6/19/2026",
+    "Sessions": 13870.0,
+    "Session Duration (seconds)": 436.7589762,
+    "Total Opportunities": 388246.0,
+    "Total Impressions": 368773.0,
+    "Revenue": 388.02,
+    "OE Revenue": 345.56,
+    "OE RPM": 0.89,
+    "OE CPM": 1.14,
+    "Impressions per Session": 26.59,
+    "Session RPM": 27.98,
+    "Programmatic Session RPM": 24.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-20",
+    "Ts (day)": "6/20/2026",
+    "Sessions": 11392.0,
+    "Session Duration (seconds)": 436.082514,
+    "Total Opportunities": 315793.0,
+    "Total Impressions": 301507.0,
+    "Revenue": 327.52,
+    "OE Revenue": 299.1,
+    "OE RPM": 0.95,
+    "OE CPM": 1.14,
+    "Impressions per Session": 26.47,
+    "Session RPM": 28.75,
+    "Programmatic Session RPM": 26.3,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-21",
+    "Ts (day)": "6/21/2026",
+    "Sessions": 18599.0,
+    "Session Duration (seconds)": 394.5970213,
+    "Total Opportunities": 476837.0,
+    "Total Impressions": 446327.0,
+    "Revenue": 499.62,
+    "OE Revenue": 453.71,
+    "OE RPM": 0.95,
+    "OE CPM": 1.16,
+    "Impressions per Session": 24.0,
+    "Session RPM": 26.86,
+    "Programmatic Session RPM": 24.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-22",
+    "Ts (day)": "6/22/2026",
+    "Sessions": 7744.0,
+    "Session Duration (seconds)": 314.6137655,
+    "Total Opportunities": 192836.0,
+    "Total Impressions": 173775.0,
+    "Revenue": 174.94,
+    "OE Revenue": 150.54,
+    "OE RPM": 0.78,
+    "OE CPM": 1.06,
+    "Impressions per Session": 22.44,
+    "Session RPM": 22.59,
+    "Programmatic Session RPM": 19.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flobikes.com",
+    "Date": "2026-06-23",
+    "Ts (day)": "6/23/2026",
+    "Sessions": 5693.0,
+    "Session Duration (seconds)": 190.8457755,
+    "Total Opportunities": 93433.0,
+    "Total Impressions": 85478.0,
+    "Revenue": 80.65,
+    "OE Revenue": 66.07,
+    "OE RPM": 0.71,
+    "OE CPM": 1.0,
+    "Impressions per Session": 15.01,
+    "Session RPM": 14.17,
+    "Programmatic Session RPM": 11.6,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-01",
+    "Ts (day)": "5/1/2026",
+    "Sessions": 41972.0,
+    "Session Duration (seconds)": 187.8491375,
+    "Total Opportunities": 279003.0,
+    "Total Impressions": 227758.0,
+    "Revenue": 229.75,
+    "OE Revenue": 131.47,
+    "OE RPM": 0.47,
+    "OE CPM": 0.84,
+    "Impressions per Session": 5.43,
+    "Session RPM": 5.47,
+    "Programmatic Session RPM": 3.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-02",
+    "Ts (day)": "5/2/2026",
+    "Sessions": 47149.0,
+    "Session Duration (seconds)": 196.524465,
+    "Total Opportunities": 343083.0,
+    "Total Impressions": 291025.0,
+    "Revenue": 348.51,
+    "OE Revenue": 194.42,
+    "OE RPM": 0.57,
+    "OE CPM": 1.06,
+    "Impressions per Session": 6.17,
+    "Session RPM": 7.39,
+    "Programmatic Session RPM": 4.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-03",
+    "Ts (day)": "5/3/2026",
+    "Sessions": 57943.0,
+    "Session Duration (seconds)": 194.8783287,
+    "Total Opportunities": 394241.0,
+    "Total Impressions": 337391.0,
+    "Revenue": 348.65,
+    "OE Revenue": 164.98,
+    "OE RPM": 0.42,
+    "OE CPM": 0.79,
+    "Impressions per Session": 5.82,
+    "Session RPM": 6.02,
+    "Programmatic Session RPM": 2.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-04",
+    "Ts (day)": "5/4/2026",
+    "Sessions": 21886.0,
+    "Session Duration (seconds)": 135.9021292,
+    "Total Opportunities": 134011.0,
+    "Total Impressions": 99390.0,
+    "Revenue": 106.68,
+    "OE Revenue": 53.5,
+    "OE RPM": 0.4,
+    "OE CPM": 0.88,
+    "Impressions per Session": 4.54,
+    "Session RPM": 4.87,
+    "Programmatic Session RPM": 2.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-05",
+    "Ts (day)": "5/5/2026",
+    "Sessions": 36893.0,
+    "Session Duration (seconds)": 167.1842626,
+    "Total Opportunities": 210230.0,
+    "Total Impressions": 171596.0,
+    "Revenue": 169.05,
+    "OE Revenue": 95.16,
+    "OE RPM": 0.45,
+    "OE CPM": 0.81,
+    "Impressions per Session": 4.65,
+    "Session RPM": 4.58,
+    "Programmatic Session RPM": 2.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-06",
+    "Ts (day)": "5/6/2026",
+    "Sessions": 47909.0,
+    "Session Duration (seconds)": 140.5102173,
+    "Total Opportunities": 259295.0,
+    "Total Impressions": 218510.0,
+    "Revenue": 247.75,
+    "OE Revenue": 105.6,
+    "OE RPM": 0.41,
+    "OE CPM": 0.91,
+    "Impressions per Session": 4.56,
+    "Session RPM": 5.17,
+    "Programmatic Session RPM": 2.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-07",
+    "Ts (day)": "5/7/2026",
+    "Sessions": 36015.0,
+    "Session Duration (seconds)": 137.564959,
+    "Total Opportunities": 185957.0,
+    "Total Impressions": 152917.0,
+    "Revenue": 157.34,
+    "OE Revenue": 74.58,
+    "OE RPM": 0.4,
+    "OE CPM": 0.81,
+    "Impressions per Session": 4.25,
+    "Session RPM": 4.37,
+    "Programmatic Session RPM": 2.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-08",
+    "Ts (day)": "5/8/2026",
+    "Sessions": 43632.0,
+    "Session Duration (seconds)": 146.4485928,
+    "Total Opportunities": 211907.0,
+    "Total Impressions": 175522.0,
+    "Revenue": 206.19,
+    "OE Revenue": 87.61,
+    "OE RPM": 0.41,
+    "OE CPM": 0.97,
+    "Impressions per Session": 4.02,
+    "Session RPM": 4.73,
+    "Programmatic Session RPM": 2.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-09",
+    "Ts (day)": "5/9/2026",
+    "Sessions": 48673.0,
+    "Session Duration (seconds)": 161.7646539,
+    "Total Opportunities": 299609.0,
+    "Total Impressions": 244285.0,
+    "Revenue": 252.76,
+    "OE Revenue": 168.66,
+    "OE RPM": 0.56,
+    "OE CPM": 0.93,
+    "Impressions per Session": 5.02,
+    "Session RPM": 5.19,
+    "Programmatic Session RPM": 3.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-10",
+    "Ts (day)": "5/10/2026",
+    "Sessions": 39755.0,
+    "Session Duration (seconds)": 176.8871588,
+    "Total Opportunities": 232556.0,
+    "Total Impressions": 198938.0,
+    "Revenue": 220.89,
+    "OE Revenue": 134.18,
+    "OE RPM": 0.58,
+    "OE CPM": 0.98,
+    "Impressions per Session": 5.0,
+    "Session RPM": 5.56,
+    "Programmatic Session RPM": 3.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-11",
+    "Ts (day)": "5/11/2026",
+    "Sessions": 28354.0,
+    "Session Duration (seconds)": 119.4807082,
+    "Total Opportunities": 156551.0,
+    "Total Impressions": 124726.0,
+    "Revenue": 129.36,
+    "OE Revenue": 85.54,
+    "OE RPM": 0.55,
+    "OE CPM": 0.94,
+    "Impressions per Session": 4.4,
+    "Session RPM": 4.56,
+    "Programmatic Session RPM": 3.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-12",
+    "Ts (day)": "5/12/2026",
+    "Sessions": 27840.0,
+    "Session Duration (seconds)": 226.8265445,
+    "Total Opportunities": 142110.0,
+    "Total Impressions": 113716.0,
+    "Revenue": 117.56,
+    "OE Revenue": 75.48,
+    "OE RPM": 0.53,
+    "OE CPM": 0.92,
+    "Impressions per Session": 4.08,
+    "Session RPM": 4.22,
+    "Programmatic Session RPM": 2.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-13",
+    "Ts (day)": "5/13/2026",
+    "Sessions": 35666.0,
+    "Session Duration (seconds)": 174.51186,
+    "Total Opportunities": 216453.0,
+    "Total Impressions": 180325.0,
+    "Revenue": 181.75,
+    "OE Revenue": 128.45,
+    "OE RPM": 0.59,
+    "OE CPM": 0.93,
+    "Impressions per Session": 5.06,
+    "Session RPM": 5.1,
+    "Programmatic Session RPM": 3.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-14",
+    "Ts (day)": "5/14/2026",
+    "Sessions": 26140.0,
+    "Session Duration (seconds)": 183.5977812,
+    "Total Opportunities": 204388.0,
+    "Total Impressions": 169555.0,
+    "Revenue": 195.4,
+    "OE Revenue": 83.93,
+    "OE RPM": 0.41,
+    "OE CPM": 0.93,
+    "Impressions per Session": 6.49,
+    "Session RPM": 7.48,
+    "Programmatic Session RPM": 3.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-15",
+    "Ts (day)": "5/15/2026",
+    "Sessions": 50671.0,
+    "Session Duration (seconds)": 118.5028123,
+    "Total Opportunities": 335227.0,
+    "Total Impressions": 288609.0,
+    "Revenue": 355.37,
+    "OE Revenue": 167.19,
+    "OE RPM": 0.5,
+    "OE CPM": 1.08,
+    "Impressions per Session": 5.7,
+    "Session RPM": 7.01,
+    "Programmatic Session RPM": 3.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-16",
+    "Ts (day)": "5/16/2026",
+    "Sessions": 61705.0,
+    "Session Duration (seconds)": 120.4040839,
+    "Total Opportunities": 371357.0,
+    "Total Impressions": 325187.0,
+    "Revenue": 377.56,
+    "OE Revenue": 252.12,
+    "OE RPM": 0.68,
+    "OE CPM": 1.1,
+    "Impressions per Session": 5.27,
+    "Session RPM": 6.12,
+    "Programmatic Session RPM": 4.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-17",
+    "Ts (day)": "5/17/2026",
+    "Sessions": 102154.0,
+    "Session Duration (seconds)": 72.65639133,
+    "Total Opportunities": 404808.0,
+    "Total Impressions": 354407.0,
+    "Revenue": 386.72,
+    "OE Revenue": 250.6,
+    "OE RPM": 0.62,
+    "OE CPM": 0.99,
+    "Impressions per Session": 3.47,
+    "Session RPM": 3.79,
+    "Programmatic Session RPM": 2.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-18",
+    "Ts (day)": "5/18/2026",
+    "Sessions": 92573.0,
+    "Session Duration (seconds)": 56.4442116,
+    "Total Opportunities": 312935.0,
+    "Total Impressions": 260907.0,
+    "Revenue": 259.84,
+    "OE Revenue": 157.65,
+    "OE RPM": 0.5,
+    "OE CPM": 0.88,
+    "Impressions per Session": 2.82,
+    "Session RPM": 2.81,
+    "Programmatic Session RPM": 1.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-19",
+    "Ts (day)": "5/19/2026",
+    "Sessions": 245379.0,
+    "Session Duration (seconds)": 21.79945309,
+    "Total Opportunities": 259952.0,
+    "Total Impressions": 229572.0,
+    "Revenue": 163.76,
+    "OE Revenue": 97.56,
+    "OE RPM": 0.38,
+    "OE CPM": 0.56,
+    "Impressions per Session": 0.94,
+    "Session RPM": 0.67,
+    "Programmatic Session RPM": 0.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-20",
+    "Ts (day)": "5/20/2026",
+    "Sessions": 175607.0,
+    "Session Duration (seconds)": 35.05480989,
+    "Total Opportunities": 363499.0,
+    "Total Impressions": 329624.0,
+    "Revenue": 315.35,
+    "OE Revenue": 100.99,
+    "OE RPM": 0.28,
+    "OE CPM": 0.56,
+    "Impressions per Session": 1.88,
+    "Session RPM": 1.8,
+    "Programmatic Session RPM": 0.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-21",
+    "Ts (day)": "5/21/2026",
+    "Sessions": 358977.0,
+    "Session Duration (seconds)": 17.75463609,
+    "Total Opportunities": 329818.0,
+    "Total Impressions": 297667.0,
+    "Revenue": 232.19,
+    "OE Revenue": 68.82,
+    "OE RPM": 0.21,
+    "OE CPM": 0.38,
+    "Impressions per Session": 0.83,
+    "Session RPM": 0.65,
+    "Programmatic Session RPM": 0.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-22",
+    "Ts (day)": "5/22/2026",
+    "Sessions": 458153.0,
+    "Session Duration (seconds)": 15.98660273,
+    "Total Opportunities": 363177.0,
+    "Total Impressions": 332707.0,
+    "Revenue": 279.47,
+    "OE Revenue": 81.25,
+    "OE RPM": 0.22,
+    "OE CPM": 0.42,
+    "Impressions per Session": 0.73,
+    "Session RPM": 0.61,
+    "Programmatic Session RPM": 0.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-23",
+    "Ts (day)": "5/23/2026",
+    "Sessions": 375907.0,
+    "Session Duration (seconds)": 25.8035711,
+    "Total Opportunities": 522776.0,
+    "Total Impressions": 478064.0,
+    "Revenue": 389.3,
+    "OE Revenue": 240.71,
+    "OE RPM": 0.46,
+    "OE CPM": 0.65,
+    "Impressions per Session": 1.27,
+    "Session RPM": 1.04,
+    "Programmatic Session RPM": 0.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-24",
+    "Ts (day)": "5/24/2026",
+    "Sessions": 415770.0,
+    "Session Duration (seconds)": 23.71326214,
+    "Total Opportunities": 501309.0,
+    "Total Impressions": 457687.0,
+    "Revenue": 390.29,
+    "OE Revenue": 192.81,
+    "OE RPM": 0.38,
+    "OE CPM": 0.62,
+    "Impressions per Session": 1.1,
+    "Session RPM": 0.94,
+    "Programmatic Session RPM": 0.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-25",
+    "Ts (day)": "5/25/2026",
+    "Sessions": 486312.0,
+    "Session Duration (seconds)": 9.008406126,
+    "Total Opportunities": 240239.0,
+    "Total Impressions": 215349.0,
+    "Revenue": 114.59,
+    "OE Revenue": 61.9,
+    "OE RPM": 0.26,
+    "OE CPM": 0.35,
+    "Impressions per Session": 0.44,
+    "Session RPM": 0.24,
+    "Programmatic Session RPM": 0.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-26",
+    "Ts (day)": "5/26/2026",
+    "Sessions": 169913.0,
+    "Session Duration (seconds)": 22.15991713,
+    "Total Opportunities": 193871.0,
+    "Total Impressions": 162001.0,
+    "Revenue": 144.45,
+    "OE Revenue": 111.82,
+    "OE RPM": 0.58,
+    "OE CPM": 0.84,
+    "Impressions per Session": 0.95,
+    "Session RPM": 0.85,
+    "Programmatic Session RPM": 0.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-27",
+    "Ts (day)": "5/27/2026",
+    "Sessions": 24903.0,
+    "Session Duration (seconds)": 131.7901458,
+    "Total Opportunities": 164350.0,
+    "Total Impressions": 141383.0,
+    "Revenue": 172.09,
+    "OE Revenue": 104.47,
+    "OE RPM": 0.64,
+    "OE CPM": 1.15,
+    "Impressions per Session": 5.68,
+    "Session RPM": 6.91,
+    "Programmatic Session RPM": 4.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-28",
+    "Ts (day)": "5/28/2026",
+    "Sessions": 52537.0,
+    "Session Duration (seconds)": 104.2995413,
+    "Total Opportunities": 268561.0,
+    "Total Impressions": 229850.0,
+    "Revenue": 280.7,
+    "OE Revenue": 173.96,
+    "OE RPM": 0.65,
+    "OE CPM": 1.19,
+    "Impressions per Session": 4.38,
+    "Session RPM": 5.34,
+    "Programmatic Session RPM": 3.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-29",
+    "Ts (day)": "5/29/2026",
+    "Sessions": 24428.0,
+    "Session Duration (seconds)": 127.1987883,
+    "Total Opportunities": 165449.0,
+    "Total Impressions": 142184.0,
+    "Revenue": 184.79,
+    "OE Revenue": 73.17,
+    "OE RPM": 0.44,
+    "OE CPM": 1.15,
+    "Impressions per Session": 5.82,
+    "Session RPM": 7.56,
+    "Programmatic Session RPM": 3.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-30",
+    "Ts (day)": "5/30/2026",
+    "Sessions": 53948.0,
+    "Session Duration (seconds)": 124.3992178,
+    "Total Opportunities": 297794.0,
+    "Total Impressions": 264764.0,
+    "Revenue": 315.8,
+    "OE Revenue": 178.75,
+    "OE RPM": 0.6,
+    "OE CPM": 1.14,
+    "Impressions per Session": 4.91,
+    "Session RPM": 5.85,
+    "Programmatic Session RPM": 3.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-05-31",
+    "Ts (day)": "5/31/2026",
+    "Sessions": 36942.0,
+    "Session Duration (seconds)": 131.5593092,
+    "Total Opportunities": 254410.0,
+    "Total Impressions": 217874.0,
+    "Revenue": 254.53,
+    "OE Revenue": 170.42,
+    "OE RPM": 0.67,
+    "OE CPM": 1.12,
+    "Impressions per Session": 5.9,
+    "Session RPM": 6.89,
+    "Programmatic Session RPM": 4.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-01",
+    "Ts (day)": "6/1/2026",
+    "Sessions": 16588.0,
+    "Session Duration (seconds)": 118.5599228,
+    "Total Opportunities": 112012.0,
+    "Total Impressions": 89095.0,
+    "Revenue": 107.87,
+    "OE Revenue": 39.03,
+    "OE RPM": 0.35,
+    "OE CPM": 0.98,
+    "Impressions per Session": 5.37,
+    "Session RPM": 6.5,
+    "Programmatic Session RPM": 2.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-02",
+    "Ts (day)": "6/2/2026",
+    "Sessions": 18096.0,
+    "Session Duration (seconds)": 130.4270557,
+    "Total Opportunities": 146411.0,
+    "Total Impressions": 126731.0,
+    "Revenue": 164.9,
+    "OE Revenue": 37.33,
+    "OE RPM": 0.25,
+    "OE CPM": 0.99,
+    "Impressions per Session": 7.0,
+    "Session RPM": 9.11,
+    "Programmatic Session RPM": 2.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-03",
+    "Ts (day)": "6/3/2026",
+    "Sessions": 23231.0,
+    "Session Duration (seconds)": 186.5901167,
+    "Total Opportunities": 227796.0,
+    "Total Impressions": 201741.0,
+    "Revenue": 266.78,
+    "OE Revenue": 126.93,
+    "OE RPM": 0.56,
+    "OE CPM": 1.24,
+    "Impressions per Session": 8.68,
+    "Session RPM": 11.48,
+    "Programmatic Session RPM": 5.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-04",
+    "Ts (day)": "6/4/2026",
+    "Sessions": 19814.0,
+    "Session Duration (seconds)": 148.4579085,
+    "Total Opportunities": 171055.0,
+    "Total Impressions": 149628.0,
+    "Revenue": 196.9,
+    "OE Revenue": 30.71,
+    "OE RPM": 0.18,
+    "OE CPM": 0.85,
+    "Impressions per Session": 7.55,
+    "Session RPM": 9.94,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-05",
+    "Ts (day)": "6/5/2026",
+    "Sessions": 18730.0,
+    "Session Duration (seconds)": 139.2126001,
+    "Total Opportunities": 131707.0,
+    "Total Impressions": 111212.0,
+    "Revenue": 120.97,
+    "OE Revenue": 48.98,
+    "OE RPM": 0.37,
+    "OE CPM": 0.84,
+    "Impressions per Session": 5.94,
+    "Session RPM": 6.46,
+    "Programmatic Session RPM": 2.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-06",
+    "Ts (day)": "6/6/2026",
+    "Sessions": 28724.0,
+    "Session Duration (seconds)": 170.6159309,
+    "Total Opportunities": 274178.0,
+    "Total Impressions": 245469.0,
+    "Revenue": 304.58,
+    "OE Revenue": 124.36,
+    "OE RPM": 0.45,
+    "OE CPM": 1.04,
+    "Impressions per Session": 8.55,
+    "Session RPM": 10.6,
+    "Programmatic Session RPM": 4.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-07",
+    "Ts (day)": "6/7/2026",
+    "Sessions": 29519.0,
+    "Session Duration (seconds)": 157.9284867,
+    "Total Opportunities": 212784.0,
+    "Total Impressions": 186572.0,
+    "Revenue": 227.3,
+    "OE Revenue": 109.31,
+    "OE RPM": 0.51,
+    "OE CPM": 1.06,
+    "Impressions per Session": 6.32,
+    "Session RPM": 7.7,
+    "Programmatic Session RPM": 3.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-08",
+    "Ts (day)": "6/8/2026",
+    "Sessions": 34469.0,
+    "Session Duration (seconds)": 126.8416258,
+    "Total Opportunities": 251011.0,
+    "Total Impressions": 228420.0,
+    "Revenue": 285.49,
+    "OE Revenue": 35.24,
+    "OE RPM": 0.14,
+    "OE CPM": 0.6,
+    "Impressions per Session": 6.63,
+    "Session RPM": 8.28,
+    "Programmatic Session RPM": 1.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-09",
+    "Ts (day)": "6/9/2026",
+    "Sessions": 24120.0,
+    "Session Duration (seconds)": 166.8182007,
+    "Total Opportunities": 213930.0,
+    "Total Impressions": 191642.0,
+    "Revenue": 246.8,
+    "OE Revenue": 36.89,
+    "OE RPM": 0.17,
+    "OE CPM": 0.77,
+    "Impressions per Session": 7.95,
+    "Session RPM": 10.23,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-10",
+    "Ts (day)": "6/10/2026",
+    "Sessions": 22110.0,
+    "Session Duration (seconds)": 67.11605608,
+    "Total Opportunities": 48278.0,
+    "Total Impressions": 41387.0,
+    "Revenue": 57.58,
+    "OE Revenue": 30.5,
+    "OE RPM": 0.63,
+    "OE CPM": 1.42,
+    "Impressions per Session": 1.87,
+    "Session RPM": 2.6,
+    "Programmatic Session RPM": 1.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-11",
+    "Ts (day)": "6/11/2026",
+    "Sessions": 18856.0,
+    "Session Duration (seconds)": 100.0497454,
+    "Total Opportunities": 39208.0,
+    "Total Impressions": 35954.0,
+    "Revenue": 54.58,
+    "OE Revenue": 35.59,
+    "OE RPM": 0.91,
+    "OE CPM": 1.63,
+    "Impressions per Session": 1.91,
+    "Session RPM": 2.89,
+    "Programmatic Session RPM": 1.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-12",
+    "Ts (day)": "6/12/2026",
+    "Sessions": 27322.0,
+    "Session Duration (seconds)": 80.84843716,
+    "Total Opportunities": 70914.0,
+    "Total Impressions": 65182.0,
+    "Revenue": 81.56,
+    "OE Revenue": 52.21,
+    "OE RPM": 0.74,
+    "OE CPM": 1.24,
+    "Impressions per Session": 2.39,
+    "Session RPM": 2.99,
+    "Programmatic Session RPM": 1.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-13",
+    "Ts (day)": "6/13/2026",
+    "Sessions": 36551.0,
+    "Session Duration (seconds)": 222.7517168,
+    "Total Opportunities": 276460.0,
+    "Total Impressions": 262149.0,
+    "Revenue": 326.2,
+    "OE Revenue": 155.64,
+    "OE RPM": 0.56,
+    "OE CPM": 1.17,
+    "Impressions per Session": 7.17,
+    "Session RPM": 8.92,
+    "Programmatic Session RPM": 4.3,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-14",
+    "Ts (day)": "6/14/2026",
+    "Sessions": 34937.0,
+    "Session Duration (seconds)": 145.8913473,
+    "Total Opportunities": 189530.0,
+    "Total Impressions": 182861.0,
+    "Revenue": 255.41,
+    "OE Revenue": 67.1,
+    "OE RPM": 0.35,
+    "OE CPM": 1.32,
+    "Impressions per Session": 5.23,
+    "Session RPM": 7.31,
+    "Programmatic Session RPM": 1.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-15",
+    "Ts (day)": "6/15/2026",
+    "Sessions": 27341.0,
+    "Session Duration (seconds)": 87.11777184,
+    "Total Opportunities": 95231.0,
+    "Total Impressions": 88003.0,
+    "Revenue": 116.47,
+    "OE Revenue": 66.82,
+    "OE RPM": 0.7,
+    "OE CPM": 1.36,
+    "Impressions per Session": 3.22,
+    "Session RPM": 4.26,
+    "Programmatic Session RPM": 2.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-16",
+    "Ts (day)": "6/16/2026",
+    "Sessions": 39397.0,
+    "Session Duration (seconds)": 180.3298982,
+    "Total Opportunities": 253328.0,
+    "Total Impressions": 245535.0,
+    "Revenue": 324.55,
+    "OE Revenue": 250.41,
+    "OE RPM": 0.99,
+    "OE CPM": 1.41,
+    "Impressions per Session": 6.23,
+    "Session RPM": 8.24,
+    "Programmatic Session RPM": 6.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-17",
+    "Ts (day)": "6/17/2026",
+    "Sessions": 28129.0,
+    "Session Duration (seconds)": 114.0897295,
+    "Total Opportunities": 120403.0,
+    "Total Impressions": 115953.0,
+    "Revenue": 160.46,
+    "OE Revenue": 24.79,
+    "OE RPM": 0.21,
+    "OE CPM": 1.14,
+    "Impressions per Session": 4.12,
+    "Session RPM": 5.7,
+    "Programmatic Session RPM": 0.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-18",
+    "Ts (day)": "6/18/2026",
+    "Sessions": 17958.0,
+    "Session Duration (seconds)": 112.3900212,
+    "Total Opportunities": 60864.0,
+    "Total Impressions": 58672.0,
+    "Revenue": 77.65,
+    "OE Revenue": 18.91,
+    "OE RPM": 0.31,
+    "OE CPM": 1.1,
+    "Impressions per Session": 3.27,
+    "Session RPM": 4.32,
+    "Programmatic Session RPM": 1.1,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-19",
+    "Ts (day)": "6/19/2026",
+    "Sessions": 53320.0,
+    "Session Duration (seconds)": 131.05482,
+    "Total Opportunities": 204470.0,
+    "Total Impressions": 197267.0,
+    "Revenue": 289.35,
+    "OE Revenue": 22.18,
+    "OE RPM": 0.11,
+    "OE CPM": 1.3,
+    "Impressions per Session": 3.7,
+    "Session RPM": 5.43,
+    "Programmatic Session RPM": 0.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-20",
+    "Ts (day)": "6/20/2026",
+    "Sessions": 39664.0,
+    "Session Duration (seconds)": 136.4322559,
+    "Total Opportunities": 174574.0,
+    "Total Impressions": 168609.0,
+    "Revenue": 247.85,
+    "OE Revenue": 27.34,
+    "OE RPM": 0.16,
+    "OE CPM": 1.42,
+    "Impressions per Session": 4.25,
+    "Session RPM": 6.25,
+    "Programmatic Session RPM": 0.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-21",
+    "Ts (day)": "6/21/2026",
+    "Sessions": 7211.0,
+    "Session Duration (seconds)": 80.111635,
+    "Total Opportunities": 32893.0,
+    "Total Impressions": 30839.0,
+    "Revenue": 41.28,
+    "OE Revenue": 21.3,
+    "OE RPM": 0.65,
+    "OE CPM": 1.36,
+    "Impressions per Session": 4.28,
+    "Session RPM": 5.72,
+    "Programmatic Session RPM": 3.0,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-22",
+    "Ts (day)": "6/22/2026",
+    "Sessions": 7174.0,
+    "Session Duration (seconds)": 73.11095623,
+    "Total Opportunities": 30692.0,
+    "Total Impressions": 27878.0,
+    "Revenue": 39.29,
+    "OE Revenue": 21.82,
+    "OE RPM": 0.71,
+    "OE CPM": 1.47,
+    "Impressions per Session": 3.89,
+    "Session RPM": 5.48,
+    "Programmatic Session RPM": 3.0,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flohockey.tv",
+    "Date": "2026-06-23",
+    "Ts (day)": "6/23/2026",
+    "Sessions": 5966.0,
+    "Session Duration (seconds)": 62.55129065,
+    "Total Opportunities": 21825.0,
+    "Total Impressions": 18446.0,
+    "Revenue": 23.98,
+    "OE Revenue": 12.44,
+    "OE RPM": 0.57,
+    "OE CPM": 1.35,
+    "Impressions per Session": 3.09,
+    "Session RPM": 4.02,
+    "Programmatic Session RPM": 2.1,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-01",
+    "Ts (day)": "5/1/2026",
+    "Sessions": 32152.0,
+    "Session Duration (seconds)": 342.6144563,
+    "Total Opportunities": 447427.0,
+    "Total Impressions": 401648.0,
+    "Revenue": 372.01,
+    "OE Revenue": 364.82,
+    "OE RPM": 0.82,
+    "OE CPM": 1.1,
+    "Impressions per Session": 12.49,
+    "Session RPM": 11.57,
+    "Programmatic Session RPM": 11.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-02",
+    "Ts (day)": "5/2/2026",
+    "Sessions": 48190.0,
+    "Session Duration (seconds)": 339.3751401,
+    "Total Opportunities": 634942.0,
+    "Total Impressions": 559593.0,
+    "Revenue": 542.91,
+    "OE Revenue": 530.6,
+    "OE RPM": 0.84,
+    "OE CPM": 1.06,
+    "Impressions per Session": 11.61,
+    "Session RPM": 11.27,
+    "Programmatic Session RPM": 11.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-03",
+    "Ts (day)": "5/3/2026",
+    "Sessions": 57383.0,
+    "Session Duration (seconds)": 323.1870937,
+    "Total Opportunities": 921979.0,
+    "Total Impressions": 805933.0,
+    "Revenue": 723.71,
+    "OE Revenue": 708.14,
+    "OE RPM": 0.77,
+    "OE CPM": 0.99,
+    "Impressions per Session": 14.04,
+    "Session RPM": 12.61,
+    "Programmatic Session RPM": 12.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-04",
+    "Ts (day)": "5/4/2026",
+    "Sessions": 14522.0,
+    "Session Duration (seconds)": 205.0082633,
+    "Total Opportunities": 257268.0,
+    "Total Impressions": 196348.0,
+    "Revenue": 155.61,
+    "OE Revenue": 151.23,
+    "OE RPM": 0.59,
+    "OE CPM": 0.91,
+    "Impressions per Session": 13.52,
+    "Session RPM": 10.72,
+    "Programmatic Session RPM": 10.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-05",
+    "Ts (day)": "5/5/2026",
+    "Sessions": 16371.0,
+    "Session Duration (seconds)": 149.2338281,
+    "Total Opportunities": 190035.0,
+    "Total Impressions": 142947.0,
+    "Revenue": 139.54,
+    "OE Revenue": 136.44,
+    "OE RPM": 0.72,
+    "OE CPM": 1.18,
+    "Impressions per Session": 8.73,
+    "Session RPM": 8.52,
+    "Programmatic Session RPM": 8.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-06",
+    "Ts (day)": "5/6/2026",
+    "Sessions": 35654.0,
+    "Session Duration (seconds)": 149.4913334,
+    "Total Opportunities": 264451.0,
+    "Total Impressions": 218276.0,
+    "Revenue": 235.11,
+    "OE Revenue": 228.74,
+    "OE RPM": 0.86,
+    "OE CPM": 1.21,
+    "Impressions per Session": 6.12,
+    "Session RPM": 6.59,
+    "Programmatic Session RPM": 6.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-07",
+    "Ts (day)": "5/7/2026",
+    "Sessions": 31237.0,
+    "Session Duration (seconds)": 291.6728559,
+    "Total Opportunities": 449272.0,
+    "Total Impressions": 391504.0,
+    "Revenue": 370.33,
+    "OE Revenue": 363.11,
+    "OE RPM": 0.81,
+    "OE CPM": 1.01,
+    "Impressions per Session": 12.53,
+    "Session RPM": 11.86,
+    "Programmatic Session RPM": 11.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-08",
+    "Ts (day)": "5/8/2026",
+    "Sessions": 36848.0,
+    "Session Duration (seconds)": 247.2147742,
+    "Total Opportunities": 410417.0,
+    "Total Impressions": 349592.0,
+    "Revenue": 323.0,
+    "OE Revenue": 314.4,
+    "OE RPM": 0.77,
+    "OE CPM": 1.09,
+    "Impressions per Session": 9.49,
+    "Session RPM": 8.77,
+    "Programmatic Session RPM": 8.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-09",
+    "Ts (day)": "5/9/2026",
+    "Sessions": 56164.0,
+    "Session Duration (seconds)": 232.9818745,
+    "Total Opportunities": 552565.0,
+    "Total Impressions": 483140.0,
+    "Revenue": 454.88,
+    "OE Revenue": 445.39,
+    "OE RPM": 0.81,
+    "OE CPM": 1.08,
+    "Impressions per Session": 8.6,
+    "Session RPM": 8.1,
+    "Programmatic Session RPM": 7.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-10",
+    "Ts (day)": "5/10/2026",
+    "Sessions": 36690.0,
+    "Session Duration (seconds)": 381.7319978,
+    "Total Opportunities": 720673.0,
+    "Total Impressions": 643061.0,
+    "Revenue": 574.13,
+    "OE Revenue": 564.11,
+    "OE RPM": 0.78,
+    "OE CPM": 1.04,
+    "Impressions per Session": 17.53,
+    "Session RPM": 15.65,
+    "Programmatic Session RPM": 15.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-11",
+    "Ts (day)": "5/11/2026",
+    "Sessions": 23909.0,
+    "Session Duration (seconds)": 136.8418169,
+    "Total Opportunities": 284317.0,
+    "Total Impressions": 227392.0,
+    "Revenue": 191.16,
+    "OE Revenue": 185.89,
+    "OE RPM": 0.65,
+    "OE CPM": 1.07,
+    "Impressions per Session": 9.51,
+    "Session RPM": 8.0,
+    "Programmatic Session RPM": 7.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-12",
+    "Ts (day)": "5/12/2026",
+    "Sessions": 24944.0,
+    "Session Duration (seconds)": 315.9782312,
+    "Total Opportunities": 248695.0,
+    "Total Impressions": 211413.0,
+    "Revenue": 228.36,
+    "OE Revenue": 221.76,
+    "OE RPM": 0.89,
+    "OE CPM": 1.31,
+    "Impressions per Session": 8.48,
+    "Session RPM": 9.15,
+    "Programmatic Session RPM": 8.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-13",
+    "Ts (day)": "5/13/2026",
+    "Sessions": 22190.0,
+    "Session Duration (seconds)": 213.3263182,
+    "Total Opportunities": 277768.0,
+    "Total Impressions": 232606.0,
+    "Revenue": 232.18,
+    "OE Revenue": 226.88,
+    "OE RPM": 0.82,
+    "OE CPM": 1.12,
+    "Impressions per Session": 10.48,
+    "Session RPM": 10.46,
+    "Programmatic Session RPM": 10.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-14",
+    "Ts (day)": "5/14/2026",
+    "Sessions": 16563.0,
+    "Session Duration (seconds)": 276.9077462,
+    "Total Opportunities": 241423.0,
+    "Total Impressions": 191460.0,
+    "Revenue": 186.09,
+    "OE Revenue": 181.68,
+    "OE RPM": 0.75,
+    "OE CPM": 1.39,
+    "Impressions per Session": 11.56,
+    "Session RPM": 11.24,
+    "Programmatic Session RPM": 11.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-15",
+    "Ts (day)": "5/15/2026",
+    "Sessions": 23514.0,
+    "Session Duration (seconds)": 516.7472144,
+    "Total Opportunities": 757073.0,
+    "Total Impressions": 688371.0,
+    "Revenue": 848.76,
+    "OE Revenue": 831.68,
+    "OE RPM": 1.1,
+    "OE CPM": 1.76,
+    "Impressions per Session": 29.27,
+    "Session RPM": 36.1,
+    "Programmatic Session RPM": 35.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-16",
+    "Ts (day)": "5/16/2026",
+    "Sessions": 33489.0,
+    "Session Duration (seconds)": 540.0840873,
+    "Total Opportunities": 943607.0,
+    "Total Impressions": 841685.0,
+    "Revenue": 1190.17,
+    "OE Revenue": 1171.71,
+    "OE RPM": 1.24,
+    "OE CPM": 1.49,
+    "Impressions per Session": 25.13,
+    "Session RPM": 35.54,
+    "Programmatic Session RPM": 35.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-17",
+    "Ts (day)": "5/17/2026",
+    "Sessions": 24639.0,
+    "Session Duration (seconds)": 579.6944681,
+    "Total Opportunities": 978850.0,
+    "Total Impressions": 847291.0,
+    "Revenue": 1113.38,
+    "OE Revenue": 1094.81,
+    "OE RPM": 1.12,
+    "OE CPM": 1.39,
+    "Impressions per Session": 34.39,
+    "Session RPM": 45.19,
+    "Programmatic Session RPM": 44.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-18",
+    "Ts (day)": "5/18/2026",
+    "Sessions": 13828.0,
+    "Session Duration (seconds)": 300.8306335,
+    "Total Opportunities": 366613.0,
+    "Total Impressions": 284527.0,
+    "Revenue": 364.83,
+    "OE Revenue": 355.86,
+    "OE RPM": 0.97,
+    "OE CPM": 1.46,
+    "Impressions per Session": 20.58,
+    "Session RPM": 26.38,
+    "Programmatic Session RPM": 25.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-19",
+    "Ts (day)": "5/19/2026",
+    "Sessions": 18918.0,
+    "Session Duration (seconds)": 364.5577757,
+    "Total Opportunities": 445258.0,
+    "Total Impressions": 390976.0,
+    "Revenue": 404.37,
+    "OE Revenue": 394.95,
+    "OE RPM": 0.89,
+    "OE CPM": 1.59,
+    "Impressions per Session": 20.67,
+    "Session RPM": 21.37,
+    "Programmatic Session RPM": 20.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-20",
+    "Ts (day)": "5/20/2026",
+    "Sessions": 20714.0,
+    "Session Duration (seconds)": 392.7052718,
+    "Total Opportunities": 647619.0,
+    "Total Impressions": 594797.0,
+    "Revenue": 584.89,
+    "OE Revenue": 559.47,
+    "OE RPM": 0.86,
+    "OE CPM": 1.6,
+    "Impressions per Session": 28.71,
+    "Session RPM": 28.24,
+    "Programmatic Session RPM": 27.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-21",
+    "Ts (day)": "5/21/2026",
+    "Sessions": 41537.0,
+    "Session Duration (seconds)": 271.4851578,
+    "Total Opportunities": 649540.0,
+    "Total Impressions": 583794.0,
+    "Revenue": 677.75,
+    "OE Revenue": 649.51,
+    "OE RPM": 1.0,
+    "OE CPM": 1.42,
+    "Impressions per Session": 14.05,
+    "Session RPM": 16.32,
+    "Programmatic Session RPM": 15.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-22",
+    "Ts (day)": "5/22/2026",
+    "Sessions": 34154.0,
+    "Session Duration (seconds)": 484.0071734,
+    "Total Opportunities": 1024247.0,
+    "Total Impressions": 928981.0,
+    "Revenue": 991.05,
+    "OE Revenue": 927.85,
+    "OE RPM": 0.91,
+    "OE CPM": 1.44,
+    "Impressions per Session": 27.2,
+    "Session RPM": 29.02,
+    "Programmatic Session RPM": 27.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-23",
+    "Ts (day)": "5/23/2026",
+    "Sessions": 34795.0,
+    "Session Duration (seconds)": 541.8483403,
+    "Total Opportunities": 1254599.0,
+    "Total Impressions": 1140276.0,
+    "Revenue": 1197.01,
+    "OE Revenue": 1116.59,
+    "OE RPM": 0.89,
+    "OE CPM": 1.49,
+    "Impressions per Session": 32.77,
+    "Session RPM": 34.4,
+    "Programmatic Session RPM": 32.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-24",
+    "Ts (day)": "5/24/2026",
+    "Sessions": 36768.0,
+    "Session Duration (seconds)": 408.1266047,
+    "Total Opportunities": 923616.0,
+    "Total Impressions": 833846.0,
+    "Revenue": 911.48,
+    "OE Revenue": 878.85,
+    "OE RPM": 0.95,
+    "OE CPM": 1.44,
+    "Impressions per Session": 22.68,
+    "Session RPM": 24.79,
+    "Programmatic Session RPM": 23.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-25",
+    "Ts (day)": "5/25/2026",
+    "Sessions": 26440.0,
+    "Session Duration (seconds)": 440.5977685,
+    "Total Opportunities": 1003089.0,
+    "Total Impressions": 928453.0,
+    "Revenue": 820.9,
+    "OE Revenue": 766.94,
+    "OE RPM": 0.76,
+    "OE CPM": 1.51,
+    "Impressions per Session": 35.12,
+    "Session RPM": 31.05,
+    "Programmatic Session RPM": 29.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-26",
+    "Ts (day)": "5/26/2026",
+    "Sessions": 15780.0,
+    "Session Duration (seconds)": 247.8570976,
+    "Total Opportunities": 286851.0,
+    "Total Impressions": 242964.0,
+    "Revenue": 243.03,
+    "OE Revenue": 232.63,
+    "OE RPM": 0.81,
+    "OE CPM": 1.39,
+    "Impressions per Session": 15.4,
+    "Session RPM": 15.4,
+    "Programmatic Session RPM": 14.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-27",
+    "Ts (day)": "5/27/2026",
+    "Sessions": 14042.0,
+    "Session Duration (seconds)": 247.4447372,
+    "Total Opportunities": 279673.0,
+    "Total Impressions": 236224.0,
+    "Revenue": 263.58,
+    "OE Revenue": 250.99,
+    "OE RPM": 0.9,
+    "OE CPM": 1.34,
+    "Impressions per Session": 16.82,
+    "Session RPM": 18.77,
+    "Programmatic Session RPM": 17.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-28",
+    "Ts (day)": "5/28/2026",
+    "Sessions": 14222.0,
+    "Session Duration (seconds)": 166.0006328,
+    "Total Opportunities": 196113.0,
+    "Total Impressions": 160893.0,
+    "Revenue": 140.45,
+    "OE Revenue": 133.09,
+    "OE RPM": 0.68,
+    "OE CPM": 1.44,
+    "Impressions per Session": 11.31,
+    "Session RPM": 9.88,
+    "Programmatic Session RPM": 9.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-29",
+    "Ts (day)": "5/29/2026",
+    "Sessions": 24299.0,
+    "Session Duration (seconds)": 445.4230627,
+    "Total Opportunities": 537457.0,
+    "Total Impressions": 492098.0,
+    "Revenue": 478.43,
+    "OE Revenue": 455.86,
+    "OE RPM": 0.85,
+    "OE CPM": 1.53,
+    "Impressions per Session": 20.25,
+    "Session RPM": 19.69,
+    "Programmatic Session RPM": 18.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-30",
+    "Ts (day)": "5/30/2026",
+    "Sessions": 40619.0,
+    "Session Duration (seconds)": 603.6880278,
+    "Total Opportunities": 1554103.0,
+    "Total Impressions": 1445023.0,
+    "Revenue": 1392.19,
+    "OE Revenue": 1332.25,
+    "OE RPM": 0.86,
+    "OE CPM": 1.44,
+    "Impressions per Session": 35.58,
+    "Session RPM": 34.27,
+    "Programmatic Session RPM": 32.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-05-31",
+    "Ts (day)": "5/31/2026",
+    "Sessions": 33466.0,
+    "Session Duration (seconds)": 542.7423056,
+    "Total Opportunities": 1373619.0,
+    "Total Impressions": 1230217.0,
+    "Revenue": 1251.62,
+    "OE Revenue": 1194.0,
+    "OE RPM": 0.87,
+    "OE CPM": 1.29,
+    "Impressions per Session": 36.76,
+    "Session RPM": 37.4,
+    "Programmatic Session RPM": 35.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-01",
+    "Ts (day)": "6/1/2026",
+    "Sessions": 17425.0,
+    "Session Duration (seconds)": 342.5875466,
+    "Total Opportunities": 471940.0,
+    "Total Impressions": 378375.0,
+    "Revenue": 369.2,
+    "OE Revenue": 359.31,
+    "OE RPM": 0.76,
+    "OE CPM": 1.36,
+    "Impressions per Session": 21.71,
+    "Session RPM": 21.19,
+    "Programmatic Session RPM": 20.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-02",
+    "Ts (day)": "6/2/2026",
+    "Sessions": 22473.0,
+    "Session Duration (seconds)": 400.8400303,
+    "Total Opportunities": 765596.0,
+    "Total Impressions": 668741.0,
+    "Revenue": 641.63,
+    "OE Revenue": 591.7,
+    "OE RPM": 0.77,
+    "OE CPM": 1.58,
+    "Impressions per Session": 29.76,
+    "Session RPM": 28.55,
+    "Programmatic Session RPM": 26.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-03",
+    "Ts (day)": "6/3/2026",
+    "Sessions": 38102.0,
+    "Session Duration (seconds)": 341.9899218,
+    "Total Opportunities": 731651.0,
+    "Total Impressions": 649444.0,
+    "Revenue": 810.33,
+    "OE Revenue": 782.07,
+    "OE RPM": 1.07,
+    "OE CPM": 1.49,
+    "Impressions per Session": 17.04,
+    "Session RPM": 21.27,
+    "Programmatic Session RPM": 20.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-04",
+    "Ts (day)": "6/4/2026",
+    "Sessions": 52246.0,
+    "Session Duration (seconds)": 478.4145006,
+    "Total Opportunities": 1693849.0,
+    "Total Impressions": 1552321.0,
+    "Revenue": 1879.53,
+    "OE Revenue": 1793.53,
+    "OE RPM": 1.06,
+    "OE CPM": 1.45,
+    "Impressions per Session": 29.71,
+    "Session RPM": 35.97,
+    "Programmatic Session RPM": 34.3,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-05",
+    "Ts (day)": "6/5/2026",
+    "Sessions": 51878.0,
+    "Session Duration (seconds)": 499.6364162,
+    "Total Opportunities": 1699522.0,
+    "Total Impressions": 1563479.0,
+    "Revenue": 1973.88,
+    "OE Revenue": 1813.69,
+    "OE RPM": 1.07,
+    "OE CPM": 1.55,
+    "Impressions per Session": 30.14,
+    "Session RPM": 38.05,
+    "Programmatic Session RPM": 35.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-06",
+    "Ts (day)": "6/6/2026",
+    "Sessions": 63165.0,
+    "Session Duration (seconds)": 457.2140268,
+    "Total Opportunities": 1754480.0,
+    "Total Impressions": 1577532.0,
+    "Revenue": 2139.97,
+    "OE Revenue": 2020.78,
+    "OE RPM": 1.15,
+    "OE CPM": 1.43,
+    "Impressions per Session": 24.97,
+    "Session RPM": 33.88,
+    "Programmatic Session RPM": 32.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-07",
+    "Ts (day)": "6/7/2026",
+    "Sessions": 56482.0,
+    "Session Duration (seconds)": 477.7437414,
+    "Total Opportunities": 1920115.0,
+    "Total Impressions": 1741707.0,
+    "Revenue": 2203.83,
+    "OE Revenue": 2037.87,
+    "OE RPM": 1.06,
+    "OE CPM": 1.44,
+    "Impressions per Session": 30.84,
+    "Session RPM": 39.02,
+    "Programmatic Session RPM": 36.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-08",
+    "Ts (day)": "6/8/2026",
+    "Sessions": 18963.0,
+    "Session Duration (seconds)": 248.0774139,
+    "Total Opportunities": 385866.0,
+    "Total Impressions": 297943.0,
+    "Revenue": 357.07,
+    "OE Revenue": 335.92,
+    "OE RPM": 0.87,
+    "OE CPM": 1.36,
+    "Impressions per Session": 15.71,
+    "Session RPM": 18.83,
+    "Programmatic Session RPM": 17.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-09",
+    "Ts (day)": "6/9/2026",
+    "Sessions": 29173.0,
+    "Session Duration (seconds)": 325.9573578,
+    "Total Opportunities": 511845.0,
+    "Total Impressions": 437228.0,
+    "Revenue": 487.08,
+    "OE Revenue": 466.76,
+    "OE RPM": 0.91,
+    "OE CPM": 1.39,
+    "Impressions per Session": 14.99,
+    "Session RPM": 16.7,
+    "Programmatic Session RPM": 16.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-10",
+    "Ts (day)": "6/10/2026",
+    "Sessions": 43076.0,
+    "Session Duration (seconds)": 362.5134414,
+    "Total Opportunities": 894916.0,
+    "Total Impressions": 829889.0,
+    "Revenue": 825.99,
+    "OE Revenue": 756.36,
+    "OE RPM": 0.85,
+    "OE CPM": 1.49,
+    "Impressions per Session": 19.27,
+    "Session RPM": 19.18,
+    "Programmatic Session RPM": 17.6,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-11",
+    "Ts (day)": "6/11/2026",
+    "Sessions": 37424.0,
+    "Session Duration (seconds)": 298.4163906,
+    "Total Opportunities": 311817.0,
+    "Total Impressions": 291907.0,
+    "Revenue": 352.33,
+    "OE Revenue": 328.15,
+    "OE RPM": 1.05,
+    "OE CPM": 1.6,
+    "Impressions per Session": 7.8,
+    "Session RPM": 9.41,
+    "Programmatic Session RPM": 8.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-12",
+    "Ts (day)": "6/12/2026",
+    "Sessions": 33712.0,
+    "Session Duration (seconds)": 357.9739855,
+    "Total Opportunities": 850272.0,
+    "Total Impressions": 820061.0,
+    "Revenue": 803.36,
+    "OE Revenue": 700.8,
+    "OE RPM": 0.82,
+    "OE CPM": 1.49,
+    "Impressions per Session": 24.33,
+    "Session RPM": 23.83,
+    "Programmatic Session RPM": 20.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-13",
+    "Ts (day)": "6/13/2026",
+    "Sessions": 35735.0,
+    "Session Duration (seconds)": 533.674185,
+    "Total Opportunities": 641943.0,
+    "Total Impressions": 611571.0,
+    "Revenue": 717.96,
+    "OE Revenue": 637.04,
+    "OE RPM": 0.99,
+    "OE CPM": 1.34,
+    "Impressions per Session": 17.11,
+    "Session RPM": 20.09,
+    "Programmatic Session RPM": 17.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-14",
+    "Ts (day)": "6/14/2026",
+    "Sessions": 33098.0,
+    "Session Duration (seconds)": 387.6049006,
+    "Total Opportunities": 650721.0,
+    "Total Impressions": 619850.0,
+    "Revenue": 710.1,
+    "OE Revenue": 615.82,
+    "OE RPM": 0.95,
+    "OE CPM": 1.32,
+    "Impressions per Session": 18.73,
+    "Session RPM": 21.45,
+    "Programmatic Session RPM": 18.6,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-15",
+    "Ts (day)": "6/15/2026",
+    "Sessions": 19943.0,
+    "Session Duration (seconds)": 207.8547861,
+    "Total Opportunities": 279148.0,
+    "Total Impressions": 265555.0,
+    "Revenue": 306.63,
+    "OE Revenue": 271.98,
+    "OE RPM": 0.97,
+    "OE CPM": 1.34,
+    "Impressions per Session": 13.32,
+    "Session RPM": 15.38,
+    "Programmatic Session RPM": 13.6,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-16",
+    "Ts (day)": "6/16/2026",
+    "Sessions": 27598.0,
+    "Session Duration (seconds)": 293.9295239,
+    "Total Opportunities": 474188.0,
+    "Total Impressions": 452729.0,
+    "Revenue": 477.54,
+    "OE Revenue": 416.85,
+    "OE RPM": 0.88,
+    "OE CPM": 1.26,
+    "Impressions per Session": 16.4,
+    "Session RPM": 17.3,
+    "Programmatic Session RPM": 15.1,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-17",
+    "Ts (day)": "6/17/2026",
+    "Sessions": 24317.0,
+    "Session Duration (seconds)": 219.567751,
+    "Total Opportunities": 359216.0,
+    "Total Impressions": 343086.0,
+    "Revenue": 360.16,
+    "OE Revenue": 313.39,
+    "OE RPM": 0.87,
+    "OE CPM": 1.27,
+    "Impressions per Session": 14.11,
+    "Session RPM": 14.81,
+    "Programmatic Session RPM": 12.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-18",
+    "Ts (day)": "6/18/2026",
+    "Sessions": 21676.0,
+    "Session Duration (seconds)": 226.9731962,
+    "Total Opportunities": 288095.0,
+    "Total Impressions": 276448.0,
+    "Revenue": 306.56,
+    "OE Revenue": 275.04,
+    "OE RPM": 0.95,
+    "OE CPM": 1.27,
+    "Impressions per Session": 12.75,
+    "Session RPM": 14.14,
+    "Programmatic Session RPM": 12.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-19",
+    "Ts (day)": "6/19/2026",
+    "Sessions": 34547.0,
+    "Session Duration (seconds)": 323.3578603,
+    "Total Opportunities": 704574.0,
+    "Total Impressions": 682340.0,
+    "Revenue": 753.22,
+    "OE Revenue": 645.81,
+    "OE RPM": 0.92,
+    "OE CPM": 1.37,
+    "Impressions per Session": 19.75,
+    "Session RPM": 21.8,
+    "Programmatic Session RPM": 18.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-20",
+    "Ts (day)": "6/20/2026",
+    "Sessions": 42667.0,
+    "Session Duration (seconds)": 389.0295545,
+    "Total Opportunities": 1111462.0,
+    "Total Impressions": 1077651.0,
+    "Revenue": 1216.3,
+    "OE Revenue": 1088.52,
+    "OE RPM": 0.98,
+    "OE CPM": 1.52,
+    "Impressions per Session": 25.26,
+    "Session RPM": 28.51,
+    "Programmatic Session RPM": 25.5,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-21",
+    "Ts (day)": "6/21/2026",
+    "Sessions": 40432.0,
+    "Session Duration (seconds)": 373.1718935,
+    "Total Opportunities": 1098251.0,
+    "Total Impressions": 1064437.0,
+    "Revenue": 1219.81,
+    "OE Revenue": 1121.79,
+    "OE RPM": 1.02,
+    "OE CPM": 1.46,
+    "Impressions per Session": 26.33,
+    "Session RPM": 30.17,
+    "Programmatic Session RPM": 27.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-22",
+    "Ts (day)": "6/22/2026",
+    "Sessions": 16487.0,
+    "Session Duration (seconds)": 172.4037727,
+    "Total Opportunities": 198160.0,
+    "Total Impressions": 190180.0,
+    "Revenue": 205.75,
+    "OE Revenue": 188.74,
+    "OE RPM": 0.95,
+    "OE CPM": 1.24,
+    "Impressions per Session": 11.54,
+    "Session RPM": 12.48,
+    "Programmatic Session RPM": 11.4,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.floracing.com",
+    "Date": "2026-06-23",
+    "Ts (day)": "6/23/2026",
+    "Sessions": 15710.0,
+    "Session Duration (seconds)": 128.1134309,
+    "Total Opportunities": 105407.0,
+    "Total Impressions": 99283.0,
+    "Revenue": 118.6,
+    "OE Revenue": 110.96,
+    "OE RPM": 1.05,
+    "OE CPM": 1.48,
+    "Impressions per Session": 6.32,
+    "Session RPM": 7.55,
+    "Programmatic Session RPM": 7.1,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-01",
+    "Ts (day)": "5/1/2026",
+    "Sessions": 5463.0,
+    "Session Duration (seconds)": 135.8702178,
+    "Total Opportunities": 33897.0,
+    "Total Impressions": 31099.0,
+    "Revenue": 40.18,
+    "OE Revenue": 8.54,
+    "OE RPM": 0.25,
+    "OE CPM": 1.26,
+    "Impressions per Session": 5.69,
+    "Session RPM": 7.35,
+    "Programmatic Session RPM": 1.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-02",
+    "Ts (day)": "5/2/2026",
+    "Sessions": 5722.0,
+    "Session Duration (seconds)": 119.0795177,
+    "Total Opportunities": 27512.0,
+    "Total Impressions": 25723.0,
+    "Revenue": 42.57,
+    "OE Revenue": 8.85,
+    "OE RPM": 0.32,
+    "OE CPM": 1.29,
+    "Impressions per Session": 4.5,
+    "Session RPM": 7.44,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-03",
+    "Ts (day)": "5/3/2026",
+    "Sessions": 4375.0,
+    "Session Duration (seconds)": 135.1755429,
+    "Total Opportunities": 22097.0,
+    "Total Impressions": 20133.0,
+    "Revenue": 31.51,
+    "OE Revenue": 6.72,
+    "OE RPM": 0.3,
+    "OE CPM": 1.2,
+    "Impressions per Session": 4.6,
+    "Session RPM": 7.2,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-04",
+    "Ts (day)": "5/4/2026",
+    "Sessions": 3617.0,
+    "Session Duration (seconds)": 143.5371855,
+    "Total Opportunities": 21302.0,
+    "Total Impressions": 18489.0,
+    "Revenue": 27.14,
+    "OE Revenue": 6.77,
+    "OE RPM": 0.32,
+    "OE CPM": 1.27,
+    "Impressions per Session": 5.11,
+    "Session RPM": 7.5,
+    "Programmatic Session RPM": 1.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-05",
+    "Ts (day)": "5/5/2026",
+    "Sessions": 5912.0,
+    "Session Duration (seconds)": 69.21820027,
+    "Total Opportunities": 15807.0,
+    "Total Impressions": 13799.0,
+    "Revenue": 18.12,
+    "OE Revenue": 4.89,
+    "OE RPM": 0.31,
+    "OE CPM": 1.11,
+    "Impressions per Session": 2.33,
+    "Session RPM": 3.06,
+    "Programmatic Session RPM": 0.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-06",
+    "Ts (day)": "5/6/2026",
+    "Sessions": 7041.0,
+    "Session Duration (seconds)": 68.23590399,
+    "Total Opportunities": 18616.0,
+    "Total Impressions": 16111.0,
+    "Revenue": 19.67,
+    "OE Revenue": 4.88,
+    "OE RPM": 0.26,
+    "OE CPM": 1.05,
+    "Impressions per Session": 2.29,
+    "Session RPM": 2.79,
+    "Programmatic Session RPM": 0.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-07",
+    "Ts (day)": "5/7/2026",
+    "Sessions": 4114.0,
+    "Session Duration (seconds)": 113.8655809,
+    "Total Opportunities": 18670.0,
+    "Total Impressions": 15667.0,
+    "Revenue": 20.28,
+    "OE Revenue": 5.78,
+    "OE RPM": 0.31,
+    "OE CPM": 1.22,
+    "Impressions per Session": 3.81,
+    "Session RPM": 4.93,
+    "Programmatic Session RPM": 1.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-08",
+    "Ts (day)": "5/8/2026",
+    "Sessions": 6903.0,
+    "Session Duration (seconds)": 92.81196581,
+    "Total Opportunities": 24608.0,
+    "Total Impressions": 21276.0,
+    "Revenue": 28.45,
+    "OE Revenue": 11.16,
+    "OE RPM": 0.45,
+    "OE CPM": 1.19,
+    "Impressions per Session": 3.08,
+    "Session RPM": 4.12,
+    "Programmatic Session RPM": 1.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-09",
+    "Ts (day)": "5/9/2026",
+    "Sessions": 6550.0,
+    "Session Duration (seconds)": 146.7392366,
+    "Total Opportunities": 32407.0,
+    "Total Impressions": 28887.0,
+    "Revenue": 45.04,
+    "OE Revenue": 14.36,
+    "OE RPM": 0.44,
+    "OE CPM": 1.23,
+    "Impressions per Session": 4.41,
+    "Session RPM": 6.88,
+    "Programmatic Session RPM": 2.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-10",
+    "Ts (day)": "5/10/2026",
+    "Sessions": 38072.0,
+    "Session Duration (seconds)": 22.75756461,
+    "Total Opportunities": 30049.0,
+    "Total Impressions": 26077.0,
+    "Revenue": 44.93,
+    "OE Revenue": 7.8,
+    "OE RPM": 0.26,
+    "OE CPM": 1.27,
+    "Impressions per Session": 0.68,
+    "Session RPM": 1.18,
+    "Programmatic Session RPM": 0.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-11",
+    "Ts (day)": "5/11/2026",
+    "Sessions": 5059.0,
+    "Session Duration (seconds)": 72.307966,
+    "Total Opportunities": 13735.0,
+    "Total Impressions": 11426.0,
+    "Revenue": 17.77,
+    "OE Revenue": 4.94,
+    "OE RPM": 0.36,
+    "OE CPM": 1.27,
+    "Impressions per Session": 2.26,
+    "Session RPM": 3.51,
+    "Programmatic Session RPM": 1.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-12",
+    "Ts (day)": "5/12/2026",
+    "Sessions": 3828.0,
+    "Session Duration (seconds)": 123.4312957,
+    "Total Opportunities": 20625.0,
+    "Total Impressions": 18023.0,
+    "Revenue": 28.73,
+    "OE Revenue": 5.25,
+    "OE RPM": 0.25,
+    "OE CPM": 1.08,
+    "Impressions per Session": 4.71,
+    "Session RPM": 7.51,
+    "Programmatic Session RPM": 1.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-13",
+    "Ts (day)": "5/13/2026",
+    "Sessions": 4462.0,
+    "Session Duration (seconds)": 105.0013447,
+    "Total Opportunities": 17439.0,
+    "Total Impressions": 14990.0,
+    "Revenue": 22.62,
+    "OE Revenue": 6.49,
+    "OE RPM": 0.37,
+    "OE CPM": 1.09,
+    "Impressions per Session": 3.36,
+    "Session RPM": 5.07,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-14",
+    "Ts (day)": "5/14/2026",
+    "Sessions": 6075.0,
+    "Session Duration (seconds)": 136.4744033,
+    "Total Opportunities": 35120.0,
+    "Total Impressions": 31341.0,
+    "Revenue": 54.12,
+    "OE Revenue": 21.83,
+    "OE RPM": 0.62,
+    "OE CPM": 1.25,
+    "Impressions per Session": 5.16,
+    "Session RPM": 8.91,
+    "Programmatic Session RPM": 3.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-15",
+    "Ts (day)": "5/15/2026",
+    "Sessions": 16254.0,
+    "Session Duration (seconds)": 82.63867356,
+    "Total Opportunities": 65571.0,
+    "Total Impressions": 57501.0,
+    "Revenue": 112.93,
+    "OE Revenue": 34.6,
+    "OE RPM": 0.53,
+    "OE CPM": 1.19,
+    "Impressions per Session": 3.54,
+    "Session RPM": 6.95,
+    "Programmatic Session RPM": 2.1,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-16",
+    "Ts (day)": "5/16/2026",
+    "Sessions": 26200.0,
+    "Session Duration (seconds)": 134.694313,
+    "Total Opportunities": 167031.0,
+    "Total Impressions": 158993.0,
+    "Revenue": 232.05,
+    "OE Revenue": 68.16,
+    "OE RPM": 0.41,
+    "OE CPM": 1.35,
+    "Impressions per Session": 6.07,
+    "Session RPM": 8.86,
+    "Programmatic Session RPM": 2.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-17",
+    "Ts (day)": "5/17/2026",
+    "Sessions": 22628.0,
+    "Session Duration (seconds)": 90.76626304,
+    "Total Opportunities": 113671.0,
+    "Total Impressions": 106987.0,
+    "Revenue": 216.65,
+    "OE Revenue": 40.83,
+    "OE RPM": 0.36,
+    "OE CPM": 1.27,
+    "Impressions per Session": 4.73,
+    "Session RPM": 9.57,
+    "Programmatic Session RPM": 1.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-18",
+    "Ts (day)": "5/18/2026",
+    "Sessions": 4129.0,
+    "Session Duration (seconds)": 154.6684427,
+    "Total Opportunities": 50899.0,
+    "Total Impressions": 44149.0,
+    "Revenue": 78.95,
+    "OE Revenue": 12.43,
+    "OE RPM": 0.24,
+    "OE CPM": 1.6,
+    "Impressions per Session": 10.69,
+    "Session RPM": 19.12,
+    "Programmatic Session RPM": 3.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-19",
+    "Ts (day)": "5/19/2026",
+    "Sessions": 8905.0,
+    "Session Duration (seconds)": 68.03155531,
+    "Total Opportunities": 49700.0,
+    "Total Impressions": 42004.0,
+    "Revenue": 50.26,
+    "OE Revenue": 8.75,
+    "OE RPM": 0.18,
+    "OE CPM": 0.94,
+    "Impressions per Session": 4.72,
+    "Session RPM": 5.64,
+    "Programmatic Session RPM": 1.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-20",
+    "Ts (day)": "5/20/2026",
+    "Sessions": 8411.0,
+    "Session Duration (seconds)": 61.65628344,
+    "Total Opportunities": 32316.0,
+    "Total Impressions": 27417.0,
+    "Revenue": 47.44,
+    "OE Revenue": 6.07,
+    "OE RPM": 0.19,
+    "OE CPM": 0.77,
+    "Impressions per Session": 3.26,
+    "Session RPM": 5.64,
+    "Programmatic Session RPM": 0.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-21",
+    "Ts (day)": "5/21/2026",
+    "Sessions": 12095.0,
+    "Session Duration (seconds)": 46.29946259,
+    "Total Opportunities": 32985.0,
+    "Total Impressions": 30458.0,
+    "Revenue": 42.42,
+    "OE Revenue": 8.68,
+    "OE RPM": 0.26,
+    "OE CPM": 0.78,
+    "Impressions per Session": 2.52,
+    "Session RPM": 3.51,
+    "Programmatic Session RPM": 0.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-22",
+    "Ts (day)": "5/22/2026",
+    "Sessions": 10490.0,
+    "Session Duration (seconds)": 68.19513823,
+    "Total Opportunities": 36578.0,
+    "Total Impressions": 34398.0,
+    "Revenue": 49.63,
+    "OE Revenue": 13.1,
+    "OE RPM": 0.36,
+    "OE CPM": 1.18,
+    "Impressions per Session": 3.28,
+    "Session RPM": 4.73,
+    "Programmatic Session RPM": 1.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-23",
+    "Ts (day)": "5/23/2026",
+    "Sessions": 28897.0,
+    "Session Duration (seconds)": 141.267571,
+    "Total Opportunities": 189812.0,
+    "Total Impressions": 180656.0,
+    "Revenue": 183.52,
+    "OE Revenue": 40.56,
+    "OE RPM": 0.21,
+    "OE CPM": 1.06,
+    "Impressions per Session": 6.25,
+    "Session RPM": 6.35,
+    "Programmatic Session RPM": 1.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-24",
+    "Ts (day)": "5/24/2026",
+    "Sessions": 14032.0,
+    "Session Duration (seconds)": 267.4089225,
+    "Total Opportunities": 255321.0,
+    "Total Impressions": 241382.0,
+    "Revenue": 284.59,
+    "OE Revenue": 39.21,
+    "OE RPM": 0.15,
+    "OE CPM": 1.1,
+    "Impressions per Session": 17.2,
+    "Session RPM": 20.28,
+    "Programmatic Session RPM": 2.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-25",
+    "Ts (day)": "5/25/2026",
+    "Sessions": 3363.0,
+    "Session Duration (seconds)": 201.0041629,
+    "Total Opportunities": 52409.0,
+    "Total Impressions": 49467.0,
+    "Revenue": 68.02,
+    "OE Revenue": 9.6,
+    "OE RPM": 0.18,
+    "OE CPM": 1.43,
+    "Impressions per Session": 14.71,
+    "Session RPM": 20.23,
+    "Programmatic Session RPM": 2.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-26",
+    "Ts (day)": "5/26/2026",
+    "Sessions": 2980.0,
+    "Session Duration (seconds)": 192.25,
+    "Total Opportunities": 45058.0,
+    "Total Impressions": 41011.0,
+    "Revenue": 62.66,
+    "OE Revenue": 8.57,
+    "OE RPM": 0.19,
+    "OE CPM": 1.53,
+    "Impressions per Session": 13.76,
+    "Session RPM": 21.03,
+    "Programmatic Session RPM": 2.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-27",
+    "Ts (day)": "5/27/2026",
+    "Sessions": 3229.0,
+    "Session Duration (seconds)": 124.3422112,
+    "Total Opportunities": 26377.0,
+    "Total Impressions": 23983.0,
+    "Revenue": 50.49,
+    "OE Revenue": 6.53,
+    "OE RPM": 0.25,
+    "OE CPM": 1.49,
+    "Impressions per Session": 7.43,
+    "Session RPM": 15.64,
+    "Programmatic Session RPM": 2.0,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-28",
+    "Ts (day)": "5/28/2026",
+    "Sessions": 3936.0,
+    "Session Duration (seconds)": 130.816311,
+    "Total Opportunities": 25835.0,
+    "Total Impressions": 24127.0,
+    "Revenue": 61.76,
+    "OE Revenue": 6.55,
+    "OE RPM": 0.25,
+    "OE CPM": 1.22,
+    "Impressions per Session": 6.13,
+    "Session RPM": 15.69,
+    "Programmatic Session RPM": 1.7,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-29",
+    "Ts (day)": "5/29/2026",
+    "Sessions": 4075.0,
+    "Session Duration (seconds)": 154.284908,
+    "Total Opportunities": 39684.0,
+    "Total Impressions": 38030.0,
+    "Revenue": 76.0,
+    "OE Revenue": 9.58,
+    "OE RPM": 0.24,
+    "OE CPM": 1.34,
+    "Impressions per Session": 9.33,
+    "Session RPM": 18.65,
+    "Programmatic Session RPM": 2.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-30",
+    "Ts (day)": "5/30/2026",
+    "Sessions": 6118.0,
+    "Session Duration (seconds)": 167.9666558,
+    "Total Opportunities": 61905.0,
+    "Total Impressions": 58385.0,
+    "Revenue": 146.27,
+    "OE Revenue": 29.48,
+    "OE RPM": 0.48,
+    "OE CPM": 1.24,
+    "Impressions per Session": 9.54,
+    "Session RPM": 23.91,
+    "Programmatic Session RPM": 4.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-05-31",
+    "Ts (day)": "5/31/2026",
+    "Sessions": 12121.0,
+    "Session Duration (seconds)": 261.0603086,
+    "Total Opportunities": 173102.0,
+    "Total Impressions": 161506.0,
+    "Revenue": 203.19,
+    "OE Revenue": 44.02,
+    "OE RPM": 0.25,
+    "OE CPM": 1.11,
+    "Impressions per Session": 13.32,
+    "Session RPM": 16.76,
+    "Programmatic Session RPM": 3.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-01",
+    "Ts (day)": "6/1/2026",
+    "Sessions": 5289.0,
+    "Session Duration (seconds)": 171.0697674,
+    "Total Opportunities": 92711.0,
+    "Total Impressions": 82694.0,
+    "Revenue": 133.3,
+    "OE Revenue": 9.4,
+    "OE RPM": 0.1,
+    "OE CPM": 1.45,
+    "Impressions per Session": 15.64,
+    "Session RPM": 25.2,
+    "Programmatic Session RPM": 1.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-02",
+    "Ts (day)": "6/2/2026",
+    "Sessions": 4468.0,
+    "Session Duration (seconds)": 139.4494181,
+    "Total Opportunities": 47252.0,
+    "Total Impressions": 43530.0,
+    "Revenue": 73.05,
+    "OE Revenue": 6.84,
+    "OE RPM": 0.14,
+    "OE CPM": 1.52,
+    "Impressions per Session": 9.74,
+    "Session RPM": 16.35,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-03",
+    "Ts (day)": "6/3/2026",
+    "Sessions": 5110.0,
+    "Session Duration (seconds)": 184.0816047,
+    "Total Opportunities": 51290.0,
+    "Total Impressions": 45886.0,
+    "Revenue": 93.57,
+    "OE Revenue": 14.11,
+    "OE RPM": 0.28,
+    "OE CPM": 1.34,
+    "Impressions per Session": 8.98,
+    "Session RPM": 18.31,
+    "Programmatic Session RPM": 2.8,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-04",
+    "Ts (day)": "6/4/2026",
+    "Sessions": 17146.0,
+    "Session Duration (seconds)": 222.1140791,
+    "Total Opportunities": 178851.0,
+    "Total Impressions": 171544.0,
+    "Revenue": 181.41,
+    "OE Revenue": 28.17,
+    "OE RPM": 0.16,
+    "OE CPM": 1.12,
+    "Impressions per Session": 10.0,
+    "Session RPM": 10.58,
+    "Programmatic Session RPM": 1.6,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-05",
+    "Ts (day)": "6/5/2026",
+    "Sessions": 7395.0,
+    "Session Duration (seconds)": 170.8162272,
+    "Total Opportunities": 99168.0,
+    "Total Impressions": 92072.0,
+    "Revenue": 94.87,
+    "OE Revenue": 11.07,
+    "OE RPM": 0.11,
+    "OE CPM": 1.63,
+    "Impressions per Session": 12.45,
+    "Session RPM": 12.83,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-06",
+    "Ts (day)": "6/6/2026",
+    "Sessions": 6466.0,
+    "Session Duration (seconds)": 159.6337767,
+    "Total Opportunities": 69680.0,
+    "Total Impressions": 63207.0,
+    "Revenue": 82.97,
+    "OE Revenue": 15.79,
+    "OE RPM": 0.23,
+    "OE CPM": 1.52,
+    "Impressions per Session": 9.78,
+    "Session RPM": 12.83,
+    "Programmatic Session RPM": 2.4,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-07",
+    "Ts (day)": "6/7/2026",
+    "Sessions": 28840.0,
+    "Session Duration (seconds)": 245.1048544,
+    "Total Opportunities": 333982.0,
+    "Total Impressions": 320058.0,
+    "Revenue": 223.62,
+    "OE Revenue": 53.55,
+    "OE RPM": 0.16,
+    "OE CPM": 1.09,
+    "Impressions per Session": 11.1,
+    "Session RPM": 7.75,
+    "Programmatic Session RPM": 1.9,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-08",
+    "Ts (day)": "6/8/2026",
+    "Sessions": 8547.0,
+    "Session Duration (seconds)": 152.2896923,
+    "Total Opportunities": 102136.0,
+    "Total Impressions": 96707.0,
+    "Revenue": 108.23,
+    "OE Revenue": 12.54,
+    "OE RPM": 0.12,
+    "OE CPM": 1.51,
+    "Impressions per Session": 11.31,
+    "Session RPM": 12.66,
+    "Programmatic Session RPM": 1.5,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-09",
+    "Ts (day)": "6/9/2026",
+    "Sessions": 6708.0,
+    "Session Duration (seconds)": 91.28234943,
+    "Total Opportunities": 38319.0,
+    "Total Impressions": 36682.0,
+    "Revenue": 76.59,
+    "OE Revenue": 8.15,
+    "OE RPM": 0.21,
+    "OE CPM": 1.6,
+    "Impressions per Session": 5.47,
+    "Session RPM": 11.42,
+    "Programmatic Session RPM": 1.2,
+    "Period": "Before"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-10",
+    "Ts (day)": "6/10/2026",
+    "Sessions": 17979.0,
+    "Session Duration (seconds)": 166.3755493,
+    "Total Opportunities": 65186.0,
+    "Total Impressions": 63353.0,
+    "Revenue": 96.86,
+    "OE Revenue": 12.24,
+    "OE RPM": 0.19,
+    "OE CPM": 1.53,
+    "Impressions per Session": 3.52,
+    "Session RPM": 5.39,
+    "Programmatic Session RPM": 0.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-11",
+    "Ts (day)": "6/11/2026",
+    "Sessions": 10418.0,
+    "Session Duration (seconds)": 96.06757535,
+    "Total Opportunities": 33415.0,
+    "Total Impressions": 32620.0,
+    "Revenue": 51.63,
+    "OE Revenue": 8.22,
+    "OE RPM": 0.25,
+    "OE CPM": 1.65,
+    "Impressions per Session": 3.13,
+    "Session RPM": 4.96,
+    "Programmatic Session RPM": 0.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-12",
+    "Ts (day)": "6/12/2026",
+    "Sessions": 12915.0,
+    "Session Duration (seconds)": 82.24003097,
+    "Total Opportunities": 44242.0,
+    "Total Impressions": 43303.0,
+    "Revenue": 75.32,
+    "OE Revenue": 10.18,
+    "OE RPM": 0.23,
+    "OE CPM": 1.55,
+    "Impressions per Session": 3.35,
+    "Session RPM": 5.83,
+    "Programmatic Session RPM": 0.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-13",
+    "Ts (day)": "6/13/2026",
+    "Sessions": 11363.0,
+    "Session Duration (seconds)": 90.22890082,
+    "Total Opportunities": 36619.0,
+    "Total Impressions": 35635.0,
+    "Revenue": 56.53,
+    "OE Revenue": 9.69,
+    "OE RPM": 0.26,
+    "OE CPM": 1.55,
+    "Impressions per Session": 3.14,
+    "Session RPM": 4.97,
+    "Programmatic Session RPM": 0.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-14",
+    "Ts (day)": "6/14/2026",
+    "Sessions": 11881.0,
+    "Session Duration (seconds)": 82.82131134,
+    "Total Opportunities": 44361.0,
+    "Total Impressions": 42541.0,
+    "Revenue": 72.62,
+    "OE Revenue": 11.96,
+    "OE RPM": 0.27,
+    "OE CPM": 1.63,
+    "Impressions per Session": 3.58,
+    "Session RPM": 6.11,
+    "Programmatic Session RPM": 1.0,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-15",
+    "Ts (day)": "6/15/2026",
+    "Sessions": 7470.0,
+    "Session Duration (seconds)": 68.87884873,
+    "Total Opportunities": 23808.0,
+    "Total Impressions": 22529.0,
+    "Revenue": 50.26,
+    "OE Revenue": 5.88,
+    "OE RPM": 0.25,
+    "OE CPM": 1.64,
+    "Impressions per Session": 3.02,
+    "Session RPM": 6.73,
+    "Programmatic Session RPM": 0.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-16",
+    "Ts (day)": "6/16/2026",
+    "Sessions": 9116.0,
+    "Session Duration (seconds)": 137.2603115,
+    "Total Opportunities": 57220.0,
+    "Total Impressions": 55390.0,
+    "Revenue": 100.52,
+    "OE Revenue": 8.86,
+    "OE RPM": 0.15,
+    "OE CPM": 1.68,
+    "Impressions per Session": 6.08,
+    "Session RPM": 11.03,
+    "Programmatic Session RPM": 1.0,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-17",
+    "Ts (day)": "6/17/2026",
+    "Sessions": 6451.0,
+    "Session Duration (seconds)": 73.80933189,
+    "Total Opportunities": 25787.0,
+    "Total Impressions": 24847.0,
+    "Revenue": 75.15,
+    "OE Revenue": 5.22,
+    "OE RPM": 0.2,
+    "OE CPM": 1.61,
+    "Impressions per Session": 3.85,
+    "Session RPM": 11.65,
+    "Programmatic Session RPM": 0.8,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-18",
+    "Ts (day)": "6/18/2026",
+    "Sessions": 8405.0,
+    "Session Duration (seconds)": 89.22795955,
+    "Total Opportunities": 28692.0,
+    "Total Impressions": 28084.0,
+    "Revenue": 58.93,
+    "OE Revenue": 8.61,
+    "OE RPM": 0.3,
+    "OE CPM": 1.77,
+    "Impressions per Session": 3.34,
+    "Session RPM": 7.01,
+    "Programmatic Session RPM": 1.0,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-19",
+    "Ts (day)": "6/19/2026",
+    "Sessions": 9989.0,
+    "Session Duration (seconds)": 170.4069476,
+    "Total Opportunities": 66874.0,
+    "Total Impressions": 65467.0,
+    "Revenue": 82.17,
+    "OE Revenue": 14.8,
+    "OE RPM": 0.22,
+    "OE CPM": 1.76,
+    "Impressions per Session": 6.55,
+    "Session RPM": 8.23,
+    "Programmatic Session RPM": 1.5,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-20",
+    "Ts (day)": "6/20/2026",
+    "Sessions": 8489.0,
+    "Session Duration (seconds)": 116.6290494,
+    "Total Opportunities": 44721.0,
+    "Total Impressions": 43439.0,
+    "Revenue": 85.9,
+    "OE Revenue": 15.77,
+    "OE RPM": 0.35,
+    "OE CPM": 1.72,
+    "Impressions per Session": 5.12,
+    "Session RPM": 10.12,
+    "Programmatic Session RPM": 1.9,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-21",
+    "Ts (day)": "6/21/2026",
+    "Sessions": 5826.0,
+    "Session Duration (seconds)": 141.2312049,
+    "Total Opportunities": 42582.0,
+    "Total Impressions": 41381.0,
+    "Revenue": 66.88,
+    "OE Revenue": 9.62,
+    "OE RPM": 0.23,
+    "OE CPM": 1.78,
+    "Impressions per Session": 7.1,
+    "Session RPM": 11.48,
+    "Programmatic Session RPM": 1.7,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-22",
+    "Ts (day)": "6/22/2026",
+    "Sessions": 3792.0,
+    "Session Duration (seconds)": 100.9382911,
+    "Total Opportunities": 20024.0,
+    "Total Impressions": 19483.0,
+    "Revenue": 38.55,
+    "OE Revenue": 4.87,
+    "OE RPM": 0.24,
+    "OE CPM": 1.67,
+    "Impressions per Session": 5.14,
+    "Session RPM": 10.17,
+    "Programmatic Session RPM": 1.3,
+    "Period": "After"
+  },
+  {
+    "Domain": "www.flotrack.org",
+    "Date": "2026-06-23",
+    "Ts (day)": "6/23/2026",
+    "Sessions": 8531.0,
+    "Session Duration (seconds)": 36.02391279,
+    "Total Opportunities": 14744.0,
+    "Total Impressions": 14520.0,
+    "Revenue": 52.98,
+    "OE Revenue": 4.48,
+    "OE RPM": 0.3,
+    "OE CPM": 1.65,
+    "Impressions per Session": 1.7,
+    "Session RPM": 6.21,
+    "Programmatic Session RPM": 0.5,
+    "Period": "After"
+  }
+];
+        const writtenInsights = {
+  "Grand Total": "\n        <p>Overall Programmatic Session RPM increased by <strong>+58.21%</strong> (from $6.52 to $10.31).</p>\n        <p><strong>Traffic Composition Shift:</strong> This positive variance is primarily driven by a massive <strong>-82.03%</strong> drop in total traffic volume. In the 'Before' period, the low-RPM domain <em>www.flohockey.tv</em> represented 67% of all sessions (3.9M out of 5.8M), which dragged down the aggregate RPM average. In the 'After' period, FloHockey's volume dropped to 365k sessions, meaning higher-RPM domains like <em>www.flobikes.com</em> and <em>www.floracing.com</em> contributed a larger percentage to the total, shifting the overall weighted average RPM upward.</p>\n        <p><strong>Underlying Performance:</strong> In reality, individual site performance was mixed, with FloBikes holding steady, FloHockey showing rebound growth, and FloRacing and FloTrack experiencing post-event cooling.</p>\n    ",
+  "www.flobikes.com": "\n        <p>Programmatic Session RPM remained exceptionally stable with a minor variance of <strong>-2.19%</strong> ($19.33 Before vs. $18.90 After).</p>\n        <p><strong>Healthy Traffic Growth:</strong> Average daily sessions increased by <strong>+24.56%</strong> (from 7,521 to 9,368 daily sessions), showing solid traffic engagement during the transition.</p>\n        <p><strong>Perfect Optimization Balance:</strong> The number of ad impressions served per session dropped by <strong>-51.22%</strong> (from 49.72 to 24.25). However, this drop was almost completely offset by a massive <strong>+100.52%</strong> surge in ad value, with OE CPM rising from $0.39 to $0.78. This indicates that while ad density was halved, the remaining ad placements doubled in value, preserving the overall programmatic session yield.</p>\n    ",
+  "www.flohockey.tv": "\n        <p>Programmatic Session RPM surged by <strong>+86.56%</strong> (from $1.18 to $2.21).</p>\n        <p><strong>Post-Spike Normalization:</strong> The 'Before' period was dominated by an extreme traffic spike between 5/19 and 5/26 (averaging 300k+ sessions/day). During this spike, ad density crashed to between 0.4 and 1.2 impressions per session (likely due to ad timeout errors, unfilled inventory, or rapid-bounce traffic), which heavily depressed the average RPM. In the 'After' period, traffic normalized to 26k daily sessions, and impressions per session rose by <strong>+84.77%</strong> back to a normal baseline of 4.2, driving the apparent yield increase.</p>\n        <p><strong>Stable Pricing:</strong> The underlying pricing (OE CPM) remained completely stable, varying by only <strong>+0.97%</strong> ($0.52 Before vs. $0.52 After).</p>\n    ",
+  "www.floracing.com": "\n        <p>Programmatic Session RPM declined by <strong>-19.14%</strong> (from $21.67 to $17.52).</p>\n        <p><strong>Stable Volume, Seasonal Shift:</strong> Daily traffic was extremely consistent, with average daily sessions dropping by only <strong>-2.8%</strong> (from 31,349 to 30,459). The decline in revenue yield was therefore not volume-driven.</p>\n        <p><strong>Post-Peak Cooldown:</strong> The variance was driven by a combination of a <strong>-13.07%</strong> decrease in impressions per session (from 20.57 to 17.88) and a <strong>-6.99%</strong> drop in ad pricing (OE CPM fell from $1.05 to $0.98). The 'Before' period covered premium racing events in May (such as Memorial Day weekend events) that traditionally attract high-paying advertiser budgets and intense viewer engagement. In June, ad layouts normalized and advertiser demand cooled slightly.</p>\n    ",
+  "www.flotrack.org": "\n        <p>Programmatic Session RPM fell by <strong>-43.04%</strong> (from $1.73 to $0.98).</p>\n        <p><strong>Stable Traffic Volume:</strong> Average daily sessions remained virtually unchanged (9,626 Before vs. 9,473 After, a minor -1.59% difference).</p>\n        <p><strong>Ad Density Decline:</strong> The drop was driven almost entirely by a <strong>-39.74%</strong> drop in ad density (impressions per session fell from 6.66 to 4.02). In contrast, ad pricing (OE CPM) was relatively stable, dropping only <strong>-5.47%</strong> ($0.26 to $0.24). This points to either layout/configuration issues in the 'After' period (e.g., lazy-loading bugs, broken slots) or a post-major event (like the NCAA Championships) reduction in pageviews per user session.</p>\n    "
+};
+
+        // State variables
+        let activeDomain = "Grand Total";
+        let activeMetric = "Programmatic Session RPM";
+        let activeChartType = "trend"; // "trend" or "bar"
+        let chartInstance = null;
+
+        // Metric configurations for formats and formatting functions
+        const metricConfig = {
+            "Programmatic Session RPM": { symbol: "$", decimals: 2, isRate: true },
+            "Sessions": { symbol: "", decimals: 0, isRate: false },
+            "OE Revenue": { symbol: "$", decimals: 2, isRate: false },
+            "Impressions per Session": { symbol: "", decimals: 2, isRate: true },
+            "OE CPM": { symbol: "$", decimals: 2, isRate: true },
+            "OE RPM": { symbol: "$", decimals: 2, isRate: true }
+        };
+
+        function formatValue(value, metric) {
+            const conf = metricConfig[metric] || { symbol: "", decimals: 2 };
+            if (conf.symbol === "$") {
+                return "$" + Number(value).toLocaleString('en-US', { minimumFractionDigits: conf.decimals, maximumFractionDigits: conf.decimals });
+            } else {
+                return Number(value).toLocaleString('en-US', { minimumFractionDigits: conf.decimals, maximumFractionDigits: conf.decimals });
+            }
+        }
+
+        // Setup event handlers
+        document.querySelectorAll('.btn-metric').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.btn-metric').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeMetric = btn.getAttribute('data-metric');
+                updateDashboard();
+            });
+        });
+
+        document.querySelectorAll('.btn-domain').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.btn-domain').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeDomain = btn.getAttribute('data-domain');
+                updateDashboard();
+            });
+        });
+
+        document.querySelectorAll('.chart-toggle-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.chart-toggle-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeChartType = btn.getAttribute('data-chart-type');
+                renderChart();
+            });
+        });
+
+        // Core Dashboard Update Function
+        function updateDashboard() {
+            const domainData = summaryStats[activeDomain];
+            const beforeVal = domainData['Before'][activeMetric];
+            const afterVal = domainData['After'][activeMetric];
+            const variance = domainData['Variance'][activeMetric];
+
+            // 1. Update main KPI Card
+            document.getElementById('kpi-main-title').textContent = activeMetric;
+            document.getElementById('kpi-main-val').textContent = formatValue(afterVal, activeMetric);
+            document.getElementById('kpi-main-before').textContent = formatValue(beforeVal, activeMetric);
+            document.getElementById('kpi-main-after').textContent = formatValue(afterVal, activeMetric);
+            
+            const varEl = document.getElementById('kpi-main-var');
+            varEl.textContent = (variance >= 0 ? "+" : "") + variance.toFixed(2) + "%";
+            varEl.className = "kpi-variance " + (variance > 0.5 ? "positive" : (variance < -0.5 ? "negative" : "neutral"));
+
+            // 2. Update Sessions KPI Card (daily averages)
+            const beforeSessDaily = summaryStats[activeDomain]['Before']['Sessions'] / summaryStats[activeDomain]['Before']['Days'];
+            const afterSessDaily = summaryStats[activeDomain]['After']['Sessions'] / summaryStats[activeDomain]['After']['Days'];
+            const sessVariance = ((afterSessDaily - beforeSessDaily) / beforeSessDaily) * 100;
+            document.getElementById('kpi-sessions-val').textContent = formatValue(afterSessDaily, 'Sessions');
+            document.getElementById('kpi-sessions-before').textContent = formatValue(beforeSessDaily, 'Sessions');
+            document.getElementById('kpi-sessions-after').textContent = formatValue(afterSessDaily, 'Sessions');
+            const sessVarEl = document.getElementById('kpi-sessions-var');
+            sessVarEl.textContent = (sessVariance >= 0 ? "+" : "") + sessVariance.toFixed(2) + "%";
+            sessVarEl.className = "kpi-variance " + (sessVariance > 0.5 ? "positive" : (sessVariance < -0.5 ? "negative" : "neutral"));
+
+            // 3. Update OE Revenue KPI Card (daily averages)
+            const beforeRevDaily = summaryStats[activeDomain]['Before']['OE Revenue'] / summaryStats[activeDomain]['Before']['Days'];
+            const afterRevDaily = summaryStats[activeDomain]['After']['OE Revenue'] / summaryStats[activeDomain]['After']['Days'];
+            const revVariance = ((afterRevDaily - beforeRevDaily) / beforeRevDaily) * 100;
+            document.getElementById('kpi-revenue-val').textContent = formatValue(afterRevDaily, 'OE Revenue');
+            document.getElementById('kpi-revenue-before').textContent = formatValue(beforeRevDaily, 'OE Revenue');
+            document.getElementById('kpi-revenue-after').textContent = formatValue(afterRevDaily, 'OE Revenue');
+            const revVarEl = document.getElementById('kpi-revenue-var');
+            revVarEl.textContent = (revVariance >= 0 ? "+" : "") + revVariance.toFixed(2) + "%";
+            revVarEl.className = "kpi-variance " + (revVariance > 0.5 ? "positive" : (revVariance < -0.5 ? "negative" : "neutral"));
+
+            // 4. Update Insights
+            document.getElementById('insights-content').innerHTML = writtenInsights[activeDomain] || "<p>No custom insights defined for this domain.</p>";
+
+            // 5. Update Table
+            updateComparisonTable();
+
+            // 6. Update Charts
+            renderChart();
+        }
+
+        function updateComparisonTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = "";
+
+            const domains = ["www.flobikes.com", "www.flohockey.tv", "www.floracing.com", "www.flotrack.org", "Grand Total"];
+            
+            domains.forEach(dom => {
+                const dData = summaryStats[dom];
+                const bVal = dData['Before'][activeMetric];
+                const aVal = dData['After'][activeMetric];
+                const varPct = dData['Variance'][activeMetric];
+                const bDays = dData['Before']['Days'];
+                const aDays = dData['After']['Days'];
+                const absDiff = aVal - bVal;
+
+                const isGT = dom === "Grand Total";
+                const isSelected = dom === activeDomain;
+
+                const tr = document.createElement('tr');
+                if (isSelected) tr.className = "active-row";
+                if (isGT) tr.style.borderTop = "2px solid var(--border-color)";
+
+                // Domain name mapping
+                let domName = dom;
+                if (dom === "www.flobikes.com") domName = "FloBikes";
+                else if (dom === "www.flohockey.tv") domName = "FloHockey";
+                else if (dom === "www.floracing.com") domName = "FloRacing";
+                else if (dom === "www.flotrack.org") domName = "FloTrack";
+
+                const varClass = varPct > 0.5 ? "color-pos" : (varPct < -0.5 ? "color-neg" : "color-neu");
+                const formattedVar = (varPct >= 0 ? "+" : "") + varPct.toFixed(2) + "%";
+
+                tr.innerHTML = `
+                    <td class="table-domain-cell" onclick="selectDomain('${dom}')">
+                        ${isGT ? '<strong>' + domName + '</strong>' : domName}
+                    </td>
+                    <td>${bDays} / ${aDays}</td>
+                    <td><span class="val-badge">${formatValue(bVal, activeMetric)}</span></td>
+                    <td><span class="val-badge">${formatValue(aVal, activeMetric)}</span></td>
+                    <td class="${absDiff >= 0 ? 'color-pos' : 'color-neg'}">${absDiff >= 0 ? '+' : ''}${formatValue(absDiff, activeMetric)}</td>
+                    <td class="${varClass}" style="font-weight: 700;">${formattedVar}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function selectDomain(dom) {
+            activeDomain = dom;
+            document.querySelectorAll('.btn-domain').forEach(btn => {
+                if (btn.getAttribute('data-domain') === dom) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            updateDashboard();
+        }
+
+        // Render Chart using Chart.js
+        function renderChart() {
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            
+            if (activeChartType === "bar") {
+                // Before vs After comparison bar chart
+                document.getElementById('chart-display-title').textContent = `${activeDomain} — Before vs After: ${activeMetric}`;
+                
+                const beforeVal = summaryStats[activeDomain]['Before'][activeMetric];
+                const afterVal = summaryStats[activeDomain]['After'][activeMetric];
+
+                chartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Before (May 1 – Jun 9)', 'After (Jun 10 – Jun 23)'],
+                        datasets: [{
+                            label: activeMetric,
+                            data: [beforeVal, afterVal],
+                            backgroundColor: [
+                                'rgba(99, 102, 241, 0.65)',  // Indigo
+                                'rgba(6, 182, 212, 0.65)'   // Cyan
+                            ],
+                            borderColor: [
+                                'rgba(99, 102, 241, 1)',
+                                'rgba(6, 182, 212, 1)'
+                            ],
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            barPercentage: 0.5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Average: ${formatValue(context.raw, activeMetric)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8', font: { weight: '600' } }
+                            }
+                        }
+                    }
+                });
+
+            } else {
+                // Daily trend chart
+                document.getElementById('chart-display-title').textContent = `${activeDomain} — Daily ${activeMetric} Trend`;
+
+                // Filter daily data for the selected domain
+                // If "Grand Total", we need to aggregate daily data across all domains for each date
+                let filtered = [];
+                if (activeDomain === "Grand Total") {
+                    const dates = [...new Set(dailyData.map(d => d.Date))].sort();
+                    dates.forEach(date => {
+                        const records = dailyData.filter(d => d.Date === date);
+                        let aggregatedVal = 0;
+                        if (activeMetric === "Sessions" || activeMetric === "OE Revenue" || activeMetric === "Total Opportunities" || activeMetric === "Total Impressions") {
+                            // Sum metrics
+                            aggregatedVal = records.reduce((acc, curr) => acc + curr[activeMetric], 0);
+                        } else if (activeMetric === "Programmatic Session RPM") {
+                            const totalOe = records.reduce((acc, curr) => acc + curr['OE Revenue'], 0);
+                            const totalSess = records.reduce((acc, curr) => acc + curr['Sessions'], 0);
+                            aggregatedVal = totalSess > 0 ? (totalOe / totalSess * 1000) : 0;
+                        } else if (activeMetric === "Session RPM") {
+                            const totalRev = records.reduce((acc, curr) => acc + curr['Revenue'], 0);
+                            const totalSess = records.reduce((acc, curr) => acc + curr['Sessions'], 0);
+                            aggregatedVal = totalSess > 0 ? (totalRev / totalSess * 1000) : 0;
+                        } else if (activeMetric === "OE CPM") {
+                            const totalOe = records.reduce((acc, curr) => acc + curr['OE Revenue'], 0);
+                            const totalImps = records.reduce((acc, curr) => acc + curr['Total Impressions'], 0);
+                            aggregatedVal = totalImps > 0 ? (totalOe / totalImps * 1000) : 0;
+                        } else if (activeMetric === "OE RPM") {
+                            const totalOe = records.reduce((acc, curr) => acc + curr['OE Revenue'], 0);
+                            const totalOpps = records.reduce((acc, curr) => acc + curr['Total Opportunities'], 0);
+                            aggregatedVal = totalOpps > 0 ? (totalOe / totalOpps * 1000) : 0;
+                        } else if (activeMetric === "Impressions per Session") {
+                            const totalImps = records.reduce((acc, curr) => acc + curr['Total Impressions'], 0);
+                            const totalSess = records.reduce((acc, curr) => acc + curr['Sessions'], 0);
+                            aggregatedVal = totalSess > 0 ? (totalImps / totalSess) : 0;
+                        }
+                        
+                        filtered.push({
+                            Date: date,
+                            Ts: records[0]['Ts (day)'],
+                            Value: aggregatedVal,
+                            Period: records[0].Period
+                        });
+                    });
+                } else {
+                    filtered = dailyData
+                        .filter(d => d.Domain === activeDomain)
+                        .map(d => ({
+                            Date: d.Date,
+                            Ts: d['Ts (day)'],
+                            Value: d[activeMetric],
+                            Period: d.Period
+                        }))
+                        .sort((a, b) => a.Date.localeCompare(b.Date));
+                }
+
+                const labels = filtered.map(d => d.Ts);
+                const values = filtered.map(d => d.Value);
+                const pointColors = filtered.map(d => d.Period === 'Before' ? 'rgba(99, 102, 241, 0.8)' : 'rgba(6, 182, 212, 0.8)');
+
+                // Find index of the transition point
+                const transitionIdx = filtered.findIndex(d => d.Period === 'After');
+
+                chartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: activeMetric,
+                            data: values,
+                            borderColor: 'rgba(99, 102, 241, 1)',
+                            borderWidth: 2.5,
+                            pointBackgroundColor: pointColors,
+                            pointBorderColor: pointColors,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            backgroundColor: function(context) {
+                                const chart = context.chart;
+                                const {ctx, chartArea} = chart;
+                                if (!chartArea) return null;
+                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
+                                gradient.addColorStop(1, 'rgba(99, 102, 241, 0.00)');
+                                return gradient;
+                            },
+                            tension: 0.2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const record = filtered[context.dataIndex];
+                                        return `${record.Period} Transition: ${formatValue(context.raw, activeMetric)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                                ticks: { 
+                                    color: '#94a3b8',
+                                    callback: function(val, index) {
+                                        // Return every 5th label to avoid overcrowding
+                                        return index % 5 === 0 ? this.getLabelForValue(val) : '';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Add visual dashed marker on transition date if transition point exists
+                if (transitionIdx >= 0) {
+                    const originalDraw = chartInstance.draw;
+                    chartInstance.draw = function() {
+                        originalDraw.apply(this, arguments);
+                        
+                        const xAxis = chartInstance.scales.x;
+                        const yAxis = chartInstance.scales.y;
+                        const x = xAxis.getPixelForValue(transitionIdx);
+                        
+                        const top = chartInstance.chartArea.top;
+                        const bottom = chartInstance.chartArea.bottom;
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.setLineDash([5, 5]);
+                        ctx.moveTo(x, top);
+                        ctx.lineTo(x, bottom);
+                        ctx.lineWidth = 1.5;
+                        ctx.strokeStyle = '#eab308'; // Warning Yellow line
+                        ctx.stroke();
+
+                        // Label for transition line
+                        ctx.fillStyle = '#eab308';
+                        ctx.font = 'bold 9px sans-serif';
+                        ctx.textAlign = 'right';
+                        ctx.fillText('Transition (6/10)  ', x, top + 15);
+                        ctx.restore();
+                    };
+                    chartInstance.update();
+                }
+            }
+        }
+
+        // Initialize dashboard
+        updateDashboard();
+    </script>
+</body>
+</html>
