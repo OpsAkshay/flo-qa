@@ -698,17 +698,13 @@
                 <div class="selector-card">
                     <div class="card-label">Custom Date Analysis</div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 90px;">
-                            <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">START DATE</span>
-                            <input type="date" id="date-start" class="date-input" value="2026-05-01" min="2026-05-01" max="2026-06-23" onchange="onDateRangeChange()">
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 120px;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">START DATE (BEFORE)</span>
+                            <input type="date" id="date-start" class="date-input" value="2026-05-01" min="2026-05-01" max="2026-06-09" onchange="onDateRangeChange()">
                         </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 90px;">
-                            <span style="font-size: 0.65rem; color: var(--accent-yellow); font-weight: 700; letter-spacing: 0.05em;">TRANSITION</span>
-                            <input type="date" id="date-transition" class="date-input" value="2026-06-10" min="2026-05-02" max="2026-06-23" onchange="onDateRangeChange()">
-                        </div>
-                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 90px;">
-                            <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">END DATE</span>
-                            <input type="date" id="date-end" class="date-input" value="2026-06-23" min="2026-05-01" max="2026-06-23" onchange="onDateRangeChange()">
+                        <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1; min-width: 120px;">
+                            <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 700; letter-spacing: 0.05em;">END DATE (AFTER)</span>
+                            <input type="date" id="date-end" class="date-input" value="2026-06-23" min="2026-06-10" max="2026-06-23" onchange="onDateRangeChange()">
                         </div>
                     </div>
                 </div>
@@ -1030,22 +1026,24 @@
         // Handle date range picker changes and validations
         function onDateRangeChange() {
             let start = document.getElementById('date-start').value;
-            let transition = document.getElementById('date-transition').value;
             let end = document.getElementById('date-end').value;
+            const transition = "2026-06-10";
 
-            if (start >= end) {
+            if (start > "2026-06-09") {
+                start = "2026-06-09";
+                document.getElementById('date-start').value = start;
+            }
+            if (start < "2026-05-01") {
                 start = "2026-05-01";
                 document.getElementById('date-start').value = start;
             }
-            if (transition <= start) {
-                let startDateObj = new Date(start);
-                startDateObj.setDate(startDateObj.getDate() + 1);
-                transition = startDateObj.toISOString().split('T')[0];
-                document.getElementById('date-transition').value = transition;
+            if (end < "2026-06-10") {
+                end = "2026-06-10";
+                document.getElementById('date-end').value = end;
             }
-            if (transition > end) {
-                transition = end;
-                document.getElementById('date-transition').value = transition;
+            if (end > "2026-06-23") {
+                end = "2026-06-23";
+                document.getElementById('date-end').value = end;
             }
 
             recalculateStats(start, transition, end);
@@ -1288,7 +1286,7 @@
                 // Filter daily data for the selected domain based on dynamic dates
                 const start = document.getElementById('date-start').value;
                 const end = document.getElementById('date-end').value;
-                const transition = document.getElementById('date-transition').value;
+                const transition = "2026-06-10";
 
                 let filtered = [];
                 if (activeDomain === "Grand Total") {
